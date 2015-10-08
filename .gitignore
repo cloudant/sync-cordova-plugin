@@ -1,0 +1,8 @@
+# OS X folder settings file
+.DS_Store
+
+# Development App Excluded
+dev/devapp
+
+# SQLCipher Android zip and libs
+dev/patch/sqlcipher-for-android*
