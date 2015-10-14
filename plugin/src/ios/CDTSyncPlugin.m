@@ -21,6 +21,7 @@
 #import <CloudantSyncEncryption.h>
 #import "CDTSyncPlugin.h"
 #import "CDTSyncPluginDelegate.h"
+#import "CDTSyncPluginInterceptor.h"
 
 #define kCDTDocId @"_id"
 #define kCDTDocRev @"_rev"
@@ -42,6 +43,7 @@
 @property NSMutableDictionary *datastoreMap;
 @property NSMutableDictionary *replicatorMap;
 @property NSMutableDictionary *delegateMap;
+@property NSMutableDictionary *interceptorMap;
 
 @end
 
@@ -75,6 +77,7 @@
     self.datastoreMap = [NSMutableDictionary dictionary];
     self.replicatorMap = [NSMutableDictionary dictionary];
     self.delegateMap = [NSMutableDictionary dictionary];
+    self.interceptorMap = [NSMutableDictionary dictionary];
 }
 
 #pragma mark - Database Create/Delete
@@ -423,15 +426,18 @@
 
         NSURL *url = [NSURL URLWithString: [NSString stringWithFormat:urlString, storeName]];
         CDTReplicator *replicator = nil;
+        CDTSyncPluginInterceptor *interceptor = [[CDTSyncPluginInterceptor alloc] initWithCommandDelegate:self.commandDelegate callbackId:command.callbackId];
         if ([type isEqualToString:@"pull"]){
             // pull replication
             CDTPullReplication *pull = [CDTPullReplication replicationWithSource:url target:localstore];
+            [pull addInterceptor:interceptor];
             CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: self.datastoreManager];
             replicator = [replicatorFactory oneWay:pull error:&error];
         } else if ([type isEqualToString:@"push"]){
             NSError *error = nil;
             // push replication
             CDTPushReplication *push = [CDTPushReplication replicationWithSource:localstore target:url];
+            [push addInterceptor:interceptor];
             CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: self.datastoreManager];
             replicator = [replicatorFactory oneWay:push error:&error];
             if (replicator){
@@ -457,6 +463,7 @@
                 // Must cache delegate for strong reference
                 self.delegateMap[[token stringValue]] = delegate;
                 self.replicatorMap[[token stringValue]] = replicator;
+                self.interceptorMap[[token stringValue]] = interceptor;
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 [pluginResult setKeepCallbackAsBool:YES];
             } else {
@@ -583,6 +590,37 @@
             break;
     }
     return result;
+}
+
+-(void)unlockInterceptor:(CDVInvokedUrlCommand *)command
+{
+    NSNumber *token = [command argumentAtIndex:0];
+    NSString *type = [command argumentAtIndex:1];
+    NSDictionary *httpContext = [command argumentAtIndex:2];
+    NSNumber *timeout = [command argumentAtIndex:3];
+    NSString *uuid = [command argumentAtIndex:4];
+
+    [self.commandDelegate runInBackground:^{
+
+        CDTSyncPluginInterceptor *interceptor = self.interceptorMap[[token stringValue]];
+        if(!interceptor){
+            // Error occurred, create response
+            NSString *message = [NSString stringWithFormat:NSLocalizedString(@"Cannot unlock interceptor with token %@.  Does not exist", nil), token];
+            NSLog(@"%@",message);
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }else{
+            [interceptor updateContext:httpContext uuid:uuid];
+            if(timeout){
+                // There was a timeout
+                NSLog(@"%@ interceptors for replicator with token %@ timed out in the JavaScript layer after %@ ms", type, token, timeout);
+            }
+
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }
+
+    }];
 }
 
 #pragma mark - JSON to Document Helpers

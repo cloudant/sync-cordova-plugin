@@ -39,7 +39,7 @@ exports.defineAutoTests = function() {
         }
 
         beforeEach(function(done) {
-            try {
+            if (!db || !encryptedDb) {
                 DatastoreManager.deleteDatastore(DBName)
                     .then(function() {
                         return DatastoreManager.deleteDatastore(encryptedDBName);
@@ -58,22 +58,10 @@ exports.defineAutoTests = function() {
                         console.error(error);
                     })
                     .fin(done);
-            } catch (e) {
-                console.error(e);
+            } else {
+                done();
             }
         });
-
-        afterEach(function(done) {
-            DatastoreManager.deleteDatastore(DBName)
-                .then(function() {
-                    return DatastoreManager.deleteDatastore(encryptedDBName);
-                })
-                .catch(function(error) {
-                    console.error("Failed to delete Datastore: " + error);
-                })
-                .fin(done);
-        });
-
 
         function testIndex(datastoreDescription) {
 
@@ -564,7 +552,27 @@ exports.defineAutoTests = function() {
             describe('Query (' + datastoreDescription + ')', function() {
                 var employee = null;
 
+                beforeEach(function() {
+
+                });
+
                 beforeEach(function(done) {
+                    jasmine.addMatchers({
+                        toBeLessThanOrEqualTo: function(util, customEqualityTesters) {
+                            return {
+                                compare: function(actual, expected) {
+                                    var result = {};
+                                    result.pass = actual <= expected;
+
+                                    if (!result.pass) {
+                                        result.message = "Expected " + actual + " to be less than or equal to " + expected;
+                                    }
+                                    return result;
+                                }
+                            };
+                        }
+                    });
+
                     try {
                         var datastore = getDatastore(datastoreDescription);
                         expect(datastore).not.toBe(null);
@@ -609,11 +617,12 @@ exports.defineAutoTests = function() {
                             function(err, results) {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(0);
-                                expect(result[nameKey]).toBe(nameValue + 0);
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBe(0);
+                                    expect(result[nameKey]).toBe(nameValue + 0);
+                                });
+
                                 done();
                             });
                     });
@@ -634,11 +643,12 @@ exports.defineAutoTests = function() {
                             function(err, results) {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(5);
-                                expect(result[nameKey]).toBe(nameValue + 5);
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBe(5);
+                                    expect(result[nameKey]).toBe(nameValue + 5);
+                                });
+
                                 done();
                             });
                     });
@@ -659,9 +669,7 @@ exports.defineAutoTests = function() {
                             function(err, results) {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(18);
 
-                                var result = results[0];
                                 results.forEach(function(result) {
                                     expect(result[ageKey]).toBeGreaterThan(1);
                                 });
@@ -688,13 +696,13 @@ exports.defineAutoTests = function() {
                             function(err, results) {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(20);
-                                var age = 19;
-                                for (var i = 0; i < results.length; i++) {
-                                    var result = results[i];
-                                    expect(result[ageKey]).toBe(age);
-                                    age--;
-                                }
+
+                                var age = results[0][ageKey];
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBeLessThanOrEqualTo(age);
+                                    age = result[ageKey];
+                                });
+
                                 done();
                             });
                     });
@@ -721,12 +729,7 @@ exports.defineAutoTests = function() {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
                                 expect(results.length).toBe(3);
-                                var age = 3;
-                                for (var i = 0; i < results.length; i++) {
-                                    var result = results[i];
-                                    expect(result[ageKey]).toBe(age);
-                                    age++;
-                                }
+
                                 done();
                             });
                     });
@@ -781,11 +784,11 @@ exports.defineAutoTests = function() {
                         datastore.find(query)
                             .then(function(results) {
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(0);
-                                expect(result[nameKey]).toBe(nameValue + 0);
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBe(0);
+                                    expect(result[nameKey]).toBe(nameValue + 0);
+                                });
                             })
                             .catch(function(error) {
                                 expect(true).toBe(false);
@@ -808,11 +811,11 @@ exports.defineAutoTests = function() {
                         datastore.find(query)
                             .then(function(results) {
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(5);
-                                expect(result[nameKey]).toBe(nameValue + 5);
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBe(5);
+                                    expect(result[nameKey]).toBe(nameValue + 5);
+                                });
                             })
                             .catch(function(error) {
                                 expect(true).toBe(false);
@@ -835,9 +838,7 @@ exports.defineAutoTests = function() {
                         datastore.find(query)
                             .then(function(results) {
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(18);
 
-                                var result = results[0];
                                 results.forEach(function(result) {
                                     expect(result[ageKey]).toBeGreaterThan(1);
                                 });
@@ -867,13 +868,13 @@ exports.defineAutoTests = function() {
                         datastore.find(query)
                             .then(function(results) {
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(20);
-                                var age = 19;
-                                for (var i = 0; i < results.length; i++) {
-                                    var result = results[i];
-                                    expect(result[ageKey]).toBe(age);
-                                    age--;
-                                }
+
+                                var age = results[0][ageKey];
+                                results.forEach(function(result) {
+                                    expect(result[ageKey]).toBeLessThanOrEqualTo(age);
+                                    age = result[ageKey];
+                                });
+
                                 done();
                             })
                             .catch(function(error) {
@@ -903,12 +904,6 @@ exports.defineAutoTests = function() {
                             .then(function(results) {
                                 expect(results).not.toBe(null);
                                 expect(results.length).toBe(3);
-                                var age = 3;
-                                for (var i = 0; i < results.length; i++) {
-                                    var result = results[i];
-                                    expect(result[ageKey]).toBe(age);
-                                    age++;
-                                }
                                 done();
                             })
                             .catch(function(error) {

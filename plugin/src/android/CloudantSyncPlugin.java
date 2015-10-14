@@ -1,16 +1,15 @@
 /**
  * Copyright (c) 2015 IBM Corp. All rights reserved.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software distributed under the
  * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
  * either express or implied. See the License for the specific language governing permissions
  * and limitations under the License.
- *
  */
 
 package com.cloudant.sync.cordova;
@@ -19,7 +18,6 @@ import android.content.Context;
 import android.util.Base64;
 import android.util.Log;
 
-import com.cloudant.http.HttpConnectionInterceptorContext;
 import com.cloudant.http.HttpConnectionRequestInterceptor;
 import com.cloudant.http.HttpConnectionResponseInterceptor;
 import com.cloudant.sync.datastore.Attachment;
@@ -35,13 +33,10 @@ import com.cloudant.sync.datastore.UnsavedStreamAttachment;
 import com.cloudant.sync.datastore.encryption.AndroidKeyProvider;
 import com.cloudant.sync.datastore.encryption.CachingKeyProvider;
 import com.cloudant.sync.datastore.encryption.KeyProvider;
-import com.cloudant.sync.notifications.ReplicationCompleted;
-import com.cloudant.sync.notifications.ReplicationErrored;
 import com.cloudant.sync.query.IndexManager;
 import com.cloudant.sync.query.QueryResult;
 import com.cloudant.sync.replication.Replicator;
 import com.cloudant.sync.replication.ReplicatorBuilder;
-import com.google.common.eventbus.Subscribe;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.cordova.CallbackContext;
@@ -84,24 +79,23 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String ACTION_START_REPLICATION = "startReplication";
     private static final String ACTION_STOP_REPLICATION = "stopReplication";
     private static final String ACTION_GET_REPLICATION_STATUS = "getReplicationStatus";
+    private static final String ACTION_UNLOCK_INTERCEPTOR = "unlockInterceptor";
 
     private static final String DatastoreDir = "hybriddatastores";
+    private static final String DATASTORE_NAME = "name";
+
     private static final String DOC_ID = "_id";
     private static final String DOC_REV = "_rev";
     private static final String DOC_DELETED = "_deleted";
     private static final String DOC_ATTACHMENTS = "_attachments";
     private static final String DOC_ATTACHMENTS_CONTENT_TYPE = "content_type";
     private static final String DOC_ATTACHMENTS_DATA = "data";
-    private static final String DATASTORE_NAME = "name";
-    private static final String QUERY_SELECTOR = "selector";
-    private static final String QUERY_LIMIT = "limit";
-    private static final String QUERY_SKIP = "skip";
-    private static final String QUERY_FIELDS = "fields";
-    private static final String QUERY_SORT = "sort";
+
     private static final String REPLICATOR_TOKEN = "token";
     private static final String REPLICATOR_DATASTORE = "datastore";
     private static final String REPLICATOR_URI = "uri";
     private static final String REPLICATOR_TYPE = "type";
+
     private static final String SQLITEDATABASE_CANONICAL_NAME = "net.sqlcipher.database.SQLiteDatabase";
     private static final String SQLITEDATABASE_LOADLIBS_METHOD_NAME = "loadLibs";
 
@@ -111,6 +105,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static Map<String, Datastore> datastores = Collections.synchronizedMap(new HashMap<String, Datastore>());
     private static Map<String, IndexManager> indexManagers = Collections.synchronizedMap(new HashMap<String, IndexManager>());
     private static Map<Integer, Replicator> replicators = Collections.synchronizedMap(new HashMap<Integer, Replicator>());
+    private static Map<Integer, SyncPluginInterceptor> interceptors = Collections.synchronizedMap(new HashMap<Integer, SyncPluginInterceptor>());
     private static Map<String, Map<String, KeyProvider>> keyProviders = Collections.synchronizedMap(new HashMap<String, Map<String, KeyProvider>>());
 
     /**
@@ -202,7 +197,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
             createReplicator(datastoreName, remoteUrl, type, timestamp, callbackContext);
 
-        } else if (ACTION_DESTROY_REPLICATOR.equals(action)){
+        } else if (ACTION_DESTROY_REPLICATOR.equals(action)) {
             final JSONObject replicatorJson = JSONObject.NULL.equals(args.get(0)) ? new JSONObject() : args.getJSONObject(0);
             final Integer token = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_TOKEN)) ? null : replicatorJson.getInt(REPLICATOR_TOKEN);
 
@@ -226,11 +221,20 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
             stopReplication(token, callbackContext);
 
+        } else if (ACTION_UNLOCK_INTERCEPTOR.equals(action)) {
+            final Integer token = JSONObject.NULL.equals(args.get(0)) ? null : args.getInt(0);
+            final String type = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
+            final JSONObject httpContext = JSONObject.NULL.equals(args.get(2)) ? null : args.getJSONObject(2);
+            final Integer timeout = JSONObject.NULL.equals(args.get(3)) ? null : args.getInt(3);
+            final String uuid = JSONObject.NULL.equals(args.get(4)) ? null : args.getString(4);
+
+            unlockInterceptor(token, type, httpContext, timeout, uuid, callbackContext);
         } else {
             return false;
         }
         return true;
     }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -278,35 +282,34 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @param datastoreName - The name of the Datastore to delete
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void deleteDatastore(String datastoreName, CallbackContext callbackContext) {
-        if (datastoreName == null) {
-            callbackContext.error("Datastore name cannot be null");
-        } else {
+    private void deleteDatastore(final String datastoreName, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (datastoreName == null) {
+                    callbackContext.error("Datastore name cannot be null");
+                } else {
 
-            // Check for Datastore in cache
-            Datastore ds = datastores.get(datastoreName);
-            if (ds != null) {
-                ds.close();
+                    // Check fo related IndexManager in cache
+                    IndexManager im = indexManagers.get(datastoreName);
+                    if (im != null) {
+                        im.close();
+                    }
+
+                    // Clear from cache
+                    datastores.remove(datastoreName);
+                    indexManagers.remove(datastoreName);
+
+                    try {
+                        datastoreManager.deleteDatastore(datastoreName);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Error deleting from disk Datastore: " + datastoreName, e);
+                    }
+
+                    callbackContext.success();
+                }
             }
-
-            // Check fo related IndexManager in cache
-            IndexManager im = indexManagers.get(datastoreName);
-            if (im != null) {
-                im.close();
-            }
-
-            // Clear from cache
-            datastores.remove(datastoreName);
-            indexManagers.remove(datastoreName);
-
-            try {
-                datastoreManager.deleteDatastore(datastoreName);
-            } catch (IOException e) {
-                Log.e(TAG, "Error deleting from disk Datastore: " + datastoreName, e);
-            }
-
-            callbackContext.success();
-        }
+        });
     }
 
     /**
@@ -459,7 +462,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                         throw new Exception("query object cannot be null");
                     }
 
-                    Query q = new Query(convertJSONtoMap(query));
+                    CloudantQuery q = new CloudantQuery(convertJSONtoMap(query));
                     QueryResult qr = im.find(q.getSelector(), q.getSkip(), q.getLimit(), q.getFields(), q.getSort());
 
                     JSONArray r = new JSONArray();
@@ -504,10 +507,21 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     }
 
                     Replicator replicator;
+                    final SyncPluginInterceptor interceptor = new SyncPluginInterceptor(callbackContext);
                     if (type.equals("push")) {
-                        replicator = ReplicatorBuilder.push().to(uri).from(ds).build();
+                        replicator = ReplicatorBuilder.push()
+                                .to(uri)
+                                .from(ds)
+                                .addRequestInterceptors((HttpConnectionRequestInterceptor) interceptor)
+                                .addResponseInterceptors((HttpConnectionResponseInterceptor) interceptor)
+                                .build();
                     } else if (type.equals("pull")) {
-                        replicator = ReplicatorBuilder.pull().from(uri).to(ds).build();
+                        replicator = ReplicatorBuilder.pull()
+                                .from(uri)
+                                .to(ds)
+                                .addRequestInterceptors((HttpConnectionRequestInterceptor) interceptor)
+                                .addResponseInterceptors((HttpConnectionResponseInterceptor) interceptor)
+                                .build();
                     } else {
                         throw new Exception("Replicator 'type' must be either 'push' or 'pull'. Received: " + type);
                     }
@@ -516,9 +530,10 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                         throw new Exception("Failed to create " + type + " Replicator. Builder returned null");
                     }
 
-                    replicator.getEventBus().register(new Listener(callbackContext));
+                    replicator.getEventBus().register(new SyncPluginListener(callbackContext));
 
                     replicators.put(token, replicator);
+                    interceptors.put(token, interceptor);
 
                     PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
                     pluginResult.setKeepCallback(true);
@@ -541,6 +556,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
             @Override
             public void run() {
                 Replicator replicator = replicators.remove(token);
+                interceptors.remove(token);
 
                 if (replicator != null) {
                     callbackContext.success();
@@ -604,10 +620,31 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                 Replicator replicator = replicators.get(token);
 
                 if (replicator == null) {
-                    callbackContext.error("Cannot stop replicator with timestamp: " + token + ". Does not exist.");
+                    callbackContext.error("Cannot stop replicator with token: " + token + ". Does not exist.");
                 } else {
                     replicator.stop();
                     callbackContext.success(convertReplicationStateToString(Replicator.State.STOPPING));
+                }
+            }
+        });
+    }
+
+    private void unlockInterceptor(final Integer token, final String type, final JSONObject httpContext, final Integer timeout, final String uuid, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                SyncPluginInterceptor interceptor = interceptors.get(token);
+
+                if (interceptor == null) {
+                    callbackContext.error("Cannot unlock interceptor with token: " + token + ". Does not exist.");
+                } else {
+                    if (timeout != null) {
+                        Log.e(TAG, type + " interceptors for replicator with token " + token + " timed out in the JavaScript layer after " + timeout + "ms.");
+                    }
+
+                    interceptor.updateContext(uuid, httpContext);
+
+                    callbackContext.success();
                 }
             }
         });
@@ -920,98 +957,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                 return "Stopping";
             default:
                 return "Unknown";
-        }
-    }
-
-    /**
-     * The Listener Class proxies replication events to the javascript layer. Each new Replicator is registered with an instance of this Listener class.
-     */
-    private class Listener implements HttpConnectionRequestInterceptor, HttpConnectionResponseInterceptor {
-        public final CallbackContext context;
-
-        Listener(CallbackContext context) {
-            this.context = context;
-        }
-
-        @Subscribe
-        public void complete(ReplicationCompleted event) {
-            JSONArray result = new JSONArray();
-            result.put("complete");
-            result.put(event.documentsReplicated);
-
-            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, result);
-            pluginResult.setKeepCallback(true);
-            context.sendPluginResult(pluginResult);
-        }
-
-        @Subscribe
-        public void error(ReplicationErrored error) {
-            JSONArray result = new JSONArray();
-            result.put("error");
-            result.put(error.errorInfo.getException().toString());
-
-            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, result);
-            pluginResult.setKeepCallback(true);
-            context.sendPluginResult(pluginResult);
-        }
-
-        @Override
-        public HttpConnectionInterceptorContext interceptRequest(HttpConnectionInterceptorContext httpConnectionInterceptorContext) {
-            return null;
-        }
-
-        @Override
-        public HttpConnectionInterceptorContext interceptResponse(HttpConnectionInterceptorContext httpConnectionInterceptorContext) {
-            return null;
-        }
-    }
-
-    /**
-     * The Query class provides convenience methods for accessing the properties of a Cloudant Query and interacting with the 'find' API
-     */
-    private class Query {
-        private Map<String, Object> selector;
-        private long limit;
-        private long skip;
-        private List<String> fields;
-        private List<Map<String, String>> sort;
-
-        @SuppressWarnings("unchecked")
-        public Query(Map<String, Object> map) {
-
-            if (map.containsKey(QUERY_SELECTOR)) {
-                this.selector = (Map<String, Object>) map.get(QUERY_SELECTOR);
-                this.limit = map.containsKey(QUERY_LIMIT) ? ((Number) map.get(QUERY_LIMIT)).longValue() : 0;
-                this.skip = map.containsKey(QUERY_SKIP) ? ((Number) map.get(QUERY_SKIP)).longValue() : 0;
-                this.fields = (List<String>) map.get(QUERY_FIELDS);
-                this.sort = (List<Map<String, String>>) map.get(QUERY_SORT);
-            } else {
-                this.selector = map;
-            }
-        }
-
-        public Map<String, Object> getSelector() {
-            return selector;
-        }
-
-        public long getLimit() {
-            return limit;
-        }
-
-        public long getSkip() {
-            return skip;
-        }
-
-        public void setSkip(long skip) {
-            this.skip = skip;
-        }
-
-        public List<String> getFields() {
-            return fields;
-        }
-
-        public List<Map<String, String>> getSort() {
-            return sort;
         }
     }
 }

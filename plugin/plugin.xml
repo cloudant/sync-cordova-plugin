@@ -43,6 +43,10 @@
 
         <header-file src="src/ios/CDTSyncPluginDelegate.h" />
         <source-file src="src/ios/CDTSyncPluginDelegate.m" />
+
+        <header-file src="src/ios/CDTSyncPluginInterceptor.h" />
+        <source-file src="src/ios/CDTSyncPluginInterceptor.m" />
+
     </platform>
 
     <!-- android -->
@@ -54,6 +58,9 @@
         </config-file>
 
         <source-file src="src/android/CloudantSyncPlugin.java" target-dir="src/com/cloudant/sync/cordova" />
+        <source-file src="src/android/SyncPluginListener.java" target-dir="src/com/cloudant/sync/cordova" />
+        <source-file src="src/android/SyncPluginInterceptor.java" target-dir="src/com/cloudant/sync/cordova" />
+        <source-file src="src/android/CloudantQuery.java" target-dir="src/com/cloudant/sync/cordova" />
         <framework src="assets/sync-extras.gradle" custom="true" type="gradleReference" />
     </platform>
 
