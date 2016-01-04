@@ -158,17 +158,16 @@
             NSError *jsonConversionError = nil;
             CDTDocumentRevision *revision = [self convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
             if(!jsonConversionError){
-                CDTMutableDocumentRevision *revisionToSave = [revision isKindOfClass:[CDTMutableDocumentRevision class]] ? (CDTMutableDocumentRevision*)revision : [revision mutableCopy];
                 // perform save
                 CDTDocumentRevision *savedRevision = nil;
 
-                BOOL isCreate = !revisionToSave.sourceRevId;
+                BOOL isCreate = !revision.revId;
 
                 NSError *error;
                 if(isCreate){
-                    savedRevision = [cachedStore createDocumentFromRevision:revisionToSave error:&error];
+                    savedRevision = [cachedStore createDocumentFromRevision:revision error:&error];
                 }else{
-                    savedRevision = [cachedStore updateDocumentFromRevision:revisionToSave error:&error];
+                    savedRevision = [cachedStore updateDocumentFromRevision:revision error:&error];
                 }
 
                 if(!error){
@@ -610,7 +609,6 @@
         }
     }
 
-    BOOL isCreate = documentId == nil || revision == nil;
     CDTDocumentRevision *documentRevision = nil;
 
     NSMutableDictionary *attachments = nil;
@@ -635,16 +633,7 @@
             attachments = nil;
     }
 
-    if(isCreate){
-        CDTMutableDocumentRevision *mutableRevision = [CDTMutableDocumentRevision revision];
-        mutableRevision.body = body;
-        mutableRevision.sourceRevId = revision;
-        mutableRevision.docId = documentId;
-        mutableRevision.attachments = attachments;
-        documentRevision = mutableRevision;
-    }else{
         documentRevision = [[CDTDocumentRevision alloc] initWithDocId:documentId revisionId:revision body:body deleted:deleted attachments:attachments sequence:0];
-    }
 
     return documentRevision;
 }
