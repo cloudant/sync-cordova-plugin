@@ -1,0 +1,31 @@
+{
+  "name": "CloudantSync",
+  "version": "0.2.0",
+  "description": "Cloudant Sync Cordova Plugin",
+  "cordova": {
+    "id": "com.cloudant.sync",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudant/sync-cordova-plugin.git"
+  },
+  "keywords": [
+    "cloudant",
+    "sync",
+    "cloudant-sync",
+    "cloudantSync",
+    "ecosystem:cordova",
+    "cordova-ios",
+    "cordova-android"
+  ],
+  "author": "IBM Cloudant",
+  "license": "Apache 2.0 License",
+  "bugs": {
+    "url": "https://github.com/cloudant/sync-cordova-plugin/issues"
+  },
+  "homepage": "https://github.com/cloudant/sync-cordova-plugin#readme"
+}
