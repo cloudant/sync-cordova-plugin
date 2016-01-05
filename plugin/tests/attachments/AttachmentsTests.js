@@ -38,6 +38,7 @@ exports.defineAutoTests = function() {
         var dillon_image = "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";
 
         beforeEach( function( done ) {
+          if (!localStore || !encryptedStore) {
             DatastoreManager.deleteDatastore( DBName )
                 .then( function() {
                     return DatastoreManager.deleteDatastore( EncryptedDBName );
@@ -56,15 +57,10 @@ exports.defineAutoTests = function() {
                     console.error( error );
                 } )
                 .fin( done );
-        } );
-
-        afterEach( function( done ) {
-            DatastoreManager.deleteDatastore( DBName )
-                .then( function() {
-                    DatastoreManager.deleteDatastore( EncryptedDBName );
-                } )
-                .fin( done );
-        } );
+              } else {
+                done();
+              }
+        });
 
         function testCRUD(storeDescription) {
             describe('CRUD with Attachments (' + storeDescription + ')', function() {
@@ -673,16 +669,16 @@ exports.defineAutoTests = function() {
                             function(err, results) {
                                 expect(err).toBe(null);
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(5);
-                                expect(result[nameKey]).toBe(nameValue + 5);
-                                expect(result._attachments).toBeDefined();
-                                expect(result._attachments.face).toBeDefined();
-                                expect(result._attachments.face.data).toBe(dillon_image);
-                                expect(result._attachments.idolFace).toBeDefined();
-                                expect(result._attachments.idolFace.data).toBe(todd_image);
+                                results.forEach(function (result) {
+                                  expect(result[ageKey]).toBe(5);
+                                  expect(result[nameKey]).toBe(nameValue + 5);
+                                  expect(result._attachments).toBeDefined();
+                                  expect(result._attachments.face).toBeDefined();
+                                  expect(result._attachments.face.data).toBe(dillon_image);
+                                  expect(result._attachments.idolFace).toBeDefined();
+                                  expect(result._attachments.idolFace.data).toBe(todd_image);
+                                });
 
                                 done();
                             });
@@ -706,16 +702,16 @@ exports.defineAutoTests = function() {
                         datastore.find(query)
                             .then(function(results) {
                                 expect(results).not.toBe(null);
-                                expect(results.length).toBe(1);
 
-                                var result = results[0];
-                                expect(result[ageKey]).toBe(5);
-                                expect(result[nameKey]).toBe(nameValue + 5);
-                                expect(result._attachments).toBeDefined();
-                                expect(result._attachments.face).toBeDefined();
-                                expect(result._attachments.face.data).toBe(dillon_image);
-                                expect(result._attachments.idolFace).toBeDefined();
-                                expect(result._attachments.idolFace.data).toBe(todd_image);
+                                results.forEach(function (result) {
+                                  expect(result[ageKey]).toBe(5);
+                                  expect(result[nameKey]).toBe(nameValue + 5);
+                                  expect(result._attachments).toBeDefined();
+                                  expect(result._attachments.face).toBeDefined();
+                                  expect(result._attachments.face.data).toBe(dillon_image);
+                                  expect(result._attachments.idolFace).toBeDefined();
+                                  expect(result._attachments.idolFace.data).toBe(todd_image);
+                                });
                             })
                             .catch(function(error) {
                                 expect(true).toBe(false);

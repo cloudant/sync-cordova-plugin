@@ -1,77 +1,67 @@
 HTTP Interceptors
 =====
-_This feature is not yet implemented_
 
 HTTP Interceptors allow the developer to modify the HTTP requests and responses during
 the replication process.
 
-<!-- Interceptors can be used to implement your own authentication schemes, for example OAuth, or
+Interceptors can be used to implement your own authentication schemes, for example OAuth, or
 provide custom headers so you can perform your own analysis on usage. They can also be used
 to monitor or log the requests made by the library.
 
-To monitor or make changes to HTTP requests, implement one or both of the following in
-your class:
+To monitor or make changes to HTTP requests, implement a function that takes a HttpInterceptorContext. This HttpInterceptorContext can be manipulated to modify an outgoing request or be used to examine an incoming response. When an interceptor has finished executing, the HttpInterceptorContext will be passed to the next interceptor in queue. To complete the execution of an interceptor, HttpInterceptorContext#done() must be called;
 
-- To modify the outgoing request, `HTTPConnectionRequestInterceptor`.
-- To examine the incoming response, `HTTPConnectionResponseInterceptor`.
+Below is an example of how to implement a interceptor:
 
-For an example of how to implement a interceptor, see  the `CookieInterceptor` class.
+```js
+var requestInterceptor = function (httpInterceptorContext) {
+    console.log("Calling URL: " + httpInterceptorContext.request.url);
+    httpInterceptorContext.done();
+};
+
+var responseInterceptor = function (httpInterceptorContext) {
+    console.log("Received response; URL: " + httpInterceptorContext.request.url + "; status code: " + httpInterceptorContext.response.statusCode + ".");
+    httpInterceptorContext.done();
+}
+```
+
 
 In order to add an HTTP Interceptor to a replication, you call the `addRequestInterceptors`
-or `addResponseInterceptors` on the `ReplicatorBuilder` class.
+or `addResponseInterceptors` on the `ReplicatorBuilder` object.
 
-For example, this is how to add an instance of `CookieInterceptor` to a pull replication:
+For example, this is how to add the request and response interceptors shown in the example above to a pull replication:
 
-```java
-import com.cloudant.sync.replication.Replicator
-import com.cloudant.sync.replication.ReplicatorBuilder
-import com.cloudant.sync.datastore.Datastore
-import com.cloudant.sync.http.CookieFilter
+```js
 
-
-Datastore ds =  manager.open("my_datastore");
-CookieInterceptor interceptor = new CookieInterceptor("username","password");
-
-Replicator replicator = ReplicatorBuilder.pull()
-              .from(new URI("https://username.cloudant.com"))
-              .to(ds)
-              .addRequestInterceptors(interceptor)
-              .addResponseInterceptors(interceptor)
-              .build();
-
-replicator.start();
+var builder = new ReplicatorBuilder();
+builder.pull()
+    .from(new URI("https://username.cloudant.com"))
+    .to(ds)
+    .addRequestInterceptors(requestInterceptor)
+    .addResponseInterceptors(responseInterceptor)
+    .build()
+        .then(function (replicator) {
+            replicator.start();
+        });
 ```
 
 ## Adding Custom Request Headers
 
 Request Interceptors can be used to add custom HTTP headers by
-accessing the underlying `HttpUrlconnection`, as in this example:
+modifying the 'headers' property, as in this example:
 
-```java
-@Override
-public HttpConnectionInterceptorContext interceptRequest
-(HttpConnectionInterceptorContext context) {
-    HttpURLConnection connection = context.connection.getConnection();
-    connection.setRequestProperty("x-my-header", "value");
-    return context;
-}
+```js
+var requestInterceptor = function (httpInterceptorContext) {
+    httpInterceptorContext.request.headers['x-my-header'] = 'value';
+    httpInterceptorContext.done();
+};
 ```
 
-## Things to Avoid
-
-The `com.cloudant.http.HttpConnectionInterceptorContext` object provides access to the underlying
-`com.cloudant.http.HttpConnection` and `java.net.HttpURLConnection` classes. This allows you to change
-settings and interact with a connection in ways would could potentially cause
-errors in the replicator.
-
-For example, reading a `java.net.HttpURLConnection` object's input stream will consume
-the response data, meaning that the replicator will not receive the data from
-Cloudant or CouchDB.
+## Things to Know
 
 Currently the API has only been tested and verified for the following:
 
-* Request Interceptors can modify the request headers and body.
-* Response Interceptors can only set the interceptor context replay flag.
+* Request Interceptors can modify the request headers.
+* Response Interceptors can only set the HttpInterceptorContext 'replayRequest' property.
 
 Changing anything else is unsupported. In the future, the number of supported APIs
-is likely to be expanded. -->
+is likely to be expanded.

@@ -44,6 +44,7 @@ exports.defineAutoTests = function() {
         }
 
         beforeEach( function( done ) {
+          if (!localStore || !encryptedStore) {
             DatastoreManager.deleteDatastore( DBName )
                 .then( function() {
                     return DatastoreManager.deleteDatastore( EncryptedDBName );
@@ -62,14 +63,9 @@ exports.defineAutoTests = function() {
                     console.error( error );
                 } )
                 .fin( done );
-        } );
-
-        afterEach( function( done ) {
-            DatastoreManager.deleteDatastore( DBName )
-                .then( function() {
-                    DatastoreManager.deleteDatastore( EncryptedDBName );
-                } )
-                .fin( done );
+              } else {
+                done();
+              }
         } );
 
         function testCRUD( datastoreDescription ) {

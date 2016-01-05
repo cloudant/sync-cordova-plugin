@@ -38,7 +38,7 @@ The `setup.sh` script does the following:
 - Patches platform assets for testing
 - Installs iOS dependencies via cocoapods
 
-After running 'setup.sh', follow the instructions in 'getting-started.md'.  You can skip copying the podfile and pod install for iOS since this was done by the setup.sh script.
+After running 'setup.sh', follow the instructions in the [README](README.md) for adding the cocoapods dependencies.  You can skip copying the podfile and pod install for iOS since this was done by the setup.sh script.
 
 ##Testing
 Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework).  You can run tests by using the `cordova run [ios | android]` command.  Tests should be placed in the `plugin/tests` directory.  To add a new test, create a new plugin directory with an appropriate label. Your test plugin.xml should resemble the following:

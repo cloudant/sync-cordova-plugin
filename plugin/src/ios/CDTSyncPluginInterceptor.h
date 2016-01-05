@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2015 IBM Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
@@ -13,4 +13,14 @@
  *
  */
 
-exports.LOCAL_COUCH_URL = 'http://127.0.0.1:5984';
+#import <Foundation/Foundation.h>
+#import <CloudantSync.h>
+#import <Cordova/CDVPlugin.h>
+
+@interface CDTSyncPluginInterceptor : NSObject<CDTHTTPInterceptor>
+
+
+-(instancetype)initWithCommandDelegate:(id<CDVCommandDelegate>)delegate callbackId:(NSString*)callbackId;
+-(void)updateContext:(NSDictionary *)httpContext uuid:(NSString*)uuid;
+
+@end

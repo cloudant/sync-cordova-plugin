@@ -17,6 +17,7 @@ echo "Setup of dev in" $dev_directory
 
 # Set script variables
 cd $dev_directory/..
+cordova_app_name=CloudantSyncDevApp
 plugin_directory=$(pwd)/plugin
 app_directory=$dev_directory/devapp
 patch_directory=$dev_directory/patch
@@ -35,7 +36,7 @@ fi
 
 # Clean and recreate app_directory
 rm -rf $app_directory
-cordova create $app_directory com.cloudant.sync.devapp CloudantSyncDevApp
+cordova create $app_directory com.cloudant.sync.devapp $cordova_app_name
 
 # Patch config.xml
 cp -f $patch_directory/config.xml $app_directory
@@ -57,6 +58,7 @@ cordova platform add android
 
 echo "Patching platform assets..."
 cp -f $patch_directory/Podfile $platform_ios_directory/Podfile
+cp -f $patch_directory/$cordova_app_name-info.plist $platform_ios_directory/$cordova_app_name/$cordova_app_name-info.plist
 cp -f $sql_cipher_directory/assets/icudt46l.zip $platform_android_directory/assets/icudt46l.zip
 cp -fr $sql_cipher_directory/libs $platform_android_directory
 

@@ -44,6 +44,8 @@ exports.defineAutoTests = function() {
         var storeName = null;
         var encryptedStoreName = null;
 
+        var defaultTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+
         function getDatastore(storeDescription) {
             var datastore;
             switch (storeDescription) {
@@ -56,8 +58,8 @@ exports.defineAutoTests = function() {
             }
             return datastore;
         }
-
         beforeEach(function(done) {
+          if (!localStore || !encryptedStore){
             DatastoreManager.deleteDatastore(DBName)
                 .then(function() {
                     return DatastoreManager.deleteDatastore(EncryptedDBName);
@@ -76,14 +78,13 @@ exports.defineAutoTests = function() {
                     console.error(error);
                 })
                 .fin(done);
+          } else {
+            done();
+          }
         });
 
-        afterEach(function(done) {
-            DatastoreManager.deleteDatastore(DBName)
-                .then(function() {
-                    return DatastoreManager.deleteDatastore(EncryptedDBName);
-                })
-                .fin(done);
+        afterEach(function () {
+          jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultTimeout;
         });
 
         function testReplication(storeDescription) {
@@ -151,6 +152,134 @@ exports.defineAutoTests = function() {
                             done();
                         }
                     });
+
+                    it("should create a pull replicator with a request and response interceptor", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor = function (context) {
+                                context.done();
+                            };
+
+                            builder.pull().from(uri).to(datastore)
+                                .addRequestInterceptors(interceptor)
+                                .addResponseInterceptors(interceptor)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('pull');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("should create a pull replicator with a comma separated list of request and response interceptors", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor1 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptor2 = function (context) {
+                                context.done();
+                            };
+
+                            builder.pull().from(uri).to(datastore)
+                                .addRequestInterceptors(interceptor1, interceptor2)
+                                .addResponseInterceptors(interceptor1, interceptor2)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('pull');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("should create a pull replicator with an array of request and response interceptors", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor1 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptor2 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptors = [interceptor1, interceptor2];
+
+                            builder.pull().from(uri).to(datastore)
+                                .addRequestInterceptors(interceptors)
+                                .addResponseInterceptors(interceptors)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('pull');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
                     it("should create a push replicator", function(done) {
                         try {
                             var datastore = getDatastore(storeDescription);
@@ -182,6 +311,156 @@ exports.defineAutoTests = function() {
                             done();
                         }
                     });
+
+                    it("should create a push replicator with a request and response interceptor", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor = function (context) {
+                                context.done();
+                            };
+
+                            builder.push().from(datastore).to(uri)
+                                .addRequestInterceptors(interceptor)
+                                .addResponseInterceptors(interceptor)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('push');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("should create a push replicator with a comma separated list of request and response interceptors", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor1 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptor2 = function (context) {
+                                context.done();
+                            };
+
+                            builder.push().from(datastore).to(uri)
+                                .addRequestInterceptors(interceptor1, interceptor2)
+                                .addResponseInterceptors(interceptor1, interceptor2)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('push');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("should create a push replicator with an array of request and response interceptors", function(done) {
+                        try {
+                            var datastore = getDatastore(storeDescription);
+                            expect(datastore).not.toBe(null);
+                            var builder = new ReplicatorBuilder();
+                            expect(builder).not.toBe(null);
+
+                            var interceptor1 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptor2 = function (context) {
+                                context.done();
+                            };
+
+                            var interceptors = [interceptor1, interceptor2];
+
+                            builder.push().from(datastore).to(uri)
+                                .addRequestInterceptors(interceptors)
+                                .addResponseInterceptors(interceptors)
+                                .build(function(error, replicator) {
+                                expect(error).toBe(null);
+                                expect(replicator.token).not.toBe(null);
+                                replicator.token = badtoken; // assert readonly
+                                expect(replicator.token).not.toBe(badtoken);
+
+                                expect(replicator.type).toBe('push');
+                                replicator.type = badtype; // assert readonly
+                                expect(replicator.type).not.toBe(badtype);
+
+                                expect(replicator.datastore).toBe(datastore);
+                                replicator.datastore = baddatastore; // assert readonly
+                                expect(replicator.datastore).not.toBe(baddatastore);
+
+                                expect(replicator.uri).toBe(uri);
+                                replicator.uri = baduri; // assert readonly
+                                expect(replicator.uri).not.toBe(baduri);
+                                done();
+                            });
+                        } catch (e) {
+                            expect(e).toBe(null);
+                            done();
+                        }
+                    });
+
+                    it('should create two replicators with different tokens', function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        var firstReplicator;
+                        var calls = 0;
+
+                        function callback(error, replicator) {
+                            expect(error).toBe(null);
+                            calls++;
+                            if (calls === 2) {
+                                expect(firstReplicator.token).not.toEqual(replicator.token);
+                                done();
+                            } else {
+                                firstReplicator = replicator;
+                            }
+                        }
+
+                        new ReplicatorBuilder().pull().to(datastore).from(uri).build(callback);
+                        new ReplicatorBuilder().push().from(datastore).to(uri).build(callback);
+                    });
+
                     // negative tests
                     it("throws error if push source is null", function(done) {
                         var datastore = getDatastore(storeDescription);
@@ -380,27 +659,170 @@ exports.defineAutoTests = function() {
                         }
                     });
 
-                    it('should create two replicators with different tokens', function(done) {
+                    it("throws error if request interceptor is null", function(done) {
                         var datastore = getDatastore(storeDescription);
                         expect(datastore).not.toBe(null);
 
-                        var firstReplicator;
-                        var calls = 0;
-
-                        function callback(error, replicator) {
-                            expect(error).toBe(null);
-                            calls++;
-                            if (calls === 2) {
-                                expect(firstReplicator.token).not.toEqual(replicator.token);
-                                done();
-                            } else {
-                                firstReplicator = replicator;
-                            }
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(null).build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
                         }
-
-                        new ReplicatorBuilder().pull().to(datastore).from(uri).build(callback);
-                        new ReplicatorBuilder().push().from(datastore).to(uri).build(callback);
                     });
+
+                    it("throws error if response interceptor is null", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(null).build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor is empty", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors().build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor is empty", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors().build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor is not a function or an array", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors("foo").build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor is not a function or an array", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors("foo").build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor in an array is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(["foo"]).build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor in an array is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(["foo"]).build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor following a valid interceptor is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(function (context) {
+                                context.done();
+                            }, "notaninterceptor").build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor following a valid interceptor is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(function (context) {
+                                context.done();
+                            }, "notaninterceptor").build(function(error,
+                                replicator) {
+                                expect(true).toBe(false);
+                            });
+                            expect(true).toBe(false);
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
                 });
                 describe('Promises', function() {
                     it("should create a pull replicator", function(done) {
@@ -471,6 +893,26 @@ exports.defineAutoTests = function() {
                             done();
                         }
                     });
+
+                    it('should create two replicators with different tokens', function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        var promises = [
+                            new ReplicatorBuilder().pull().to(datastore).from(uri).build(),
+                            new ReplicatorBuilder().push().from(datastore).to(uri).build()
+                        ];
+
+                        Q.all(promises)
+                            .spread(function(pullReplicator, pushReplicator) {
+                                expect(pullReplicator.token).not.toEqual(pushReplicator.token);
+                            })
+                            .catch(function(error) {
+                                expect(error).toBe(null);
+                            })
+                            .fin(done);
+                    });
+
                     // negative tests
                     it("throws error if push source is null", function(done) {
                         var datastore = getDatastore(storeDescription);
@@ -722,25 +1164,230 @@ exports.defineAutoTests = function() {
                             done();
                         }
                     });
-                });
 
-                it('should create two replicators with different tokens', function(done) {
-                    var datastore = getDatastore(storeDescription);
-                    expect(datastore).not.toBe(null);
+                    it("throws error if pull target is not set", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
 
-                    var promises = [
-                        new ReplicatorBuilder().pull().to(datastore).from(uri).build(),
-                        new ReplicatorBuilder().push().from(datastore).to(uri).build()
-                    ];
+                        try {
+                            new ReplicatorBuilder().pull().to(datastore).build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
 
-                    Q.all(promises)
-                        .spread(function(pullReplicator, pushReplicator) {
-                            expect(pullReplicator.token).not.toEqual(pushReplicator.token);
-                        })
-                        .catch(function(error) {
-                            expect(error).toBe(null);
-                        })
-                        .fin(done);
+                    it("throws error if request interceptor is null", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(null).build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor is null", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(null).build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor is empty", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors().build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor is empty", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors().build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor is not a function or an array", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors("foo").build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor is not a function or an array", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors("foo").build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor in an array is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(["foo"]).build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor in an array is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(["foo"]).build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if request interceptor following a valid interceptor is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(function (context) {
+                                context.done();
+                            }, "notaninterceptor").build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
+
+                    it("throws error if response interceptor following a valid interceptor is not a function", function(done) {
+                        var datastore = getDatastore(storeDescription);
+                        expect(datastore).not.toBe(null);
+
+                        try {
+                            new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(function (context) {
+                                context.done();
+                            }, "notaninterceptor").build()
+                                .then(function(replicator) {
+                                    expect(true).toBe(false);
+                                })
+                                .catch(function(e) {
+                                    expect(true).toBe(false);
+                                });
+                            expect(true).toBe(false);
+                            done();
+                        } catch (error) {
+                            expect(error).not.toBe(null);
+                            done();
+                        }
+                    });
                 });
             });
 
@@ -763,6 +1410,7 @@ exports.defineAutoTests = function() {
                 }
 
                 beforeEach(function(done) {
+                    jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
                     var datastore = getDatastore(storeDescription);
                     expect(datastore).not.toBe(null);
 
@@ -1334,6 +1982,280 @@ exports.defineAutoTests = function() {
                             console.log(e);
                             done();
                         }
+                    });
+                });
+
+                describe('interceptors', function () {
+                    it('should add a request header', function (done) {
+                        var datastore = getDatastore(storeDescription);
+
+                        new ReplicatorBuilder()
+                            .pull()
+                            .from(uri)
+                            .to(datastore)
+                            .addRequestInterceptors(function (context) {
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.headers).toBeDefined();
+                                expect(context.request.headers).not.toBe(null);
+                                expect(context.request.url).toBeDefined();
+                                expect(context.request.url).not.toBe(null);
+
+                                expect(context.response).toBeDefined();
+                                expect(context.response).toBe(null);
+
+                                expect(context.replayRequest).toBeDefined();
+                                expect(context.replayRequest).not.toBe(null);
+
+                                context.request.headers['x-my-foo-header'] = 'bar';
+                                context.done();
+                            })
+                            .addResponseInterceptors(function (context) {
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.headers).toBeDefined();
+                                expect(context.request.headers).not.toBe(null);
+                                expect(context.request.headers['x-my-foo-header']).toBeDefined();
+                                expect(context.request.headers['x-my-foo-header']).toBe('bar');
+                                expect(context.request.url).toBeDefined();
+                                expect(context.request.url).not.toBe(null);
+
+                                expect(context.response).toBeDefined();
+                                expect(context.response).not.toBe(null);
+                                expect(context.response.statusCode).toBeDefined();
+                                expect(context.response.statusCode).not.toBe(null);
+                                expect(context.response.headers).toBeDefined();
+                                expect(context.response.headers).not.toBe(null);
+
+                                expect(context.replayRequest).toBeDefined();
+                                expect(context.replayRequest).not.toBe(null);
+
+                                context.done();
+
+                            }).build()
+                                .then(function (replicator) {
+                                    expect(replicator).not.toBe(null);
+
+                                    replicator.on('complete', function(numDocs) {
+                                        expect(numDocs).not.toBe(null);
+
+                                        replicator.datastore.getDocument('aardvark')
+                                            .then(function(documentRevision) {
+                                                expect(documentRevision).not.toBe(null);
+                                                expect(documentRevision._id).not.toBe(null);
+                                                expect(documentRevision._id).toBe('aardvark');
+                                                done();
+                                            });
+                                    });
+
+                                    return replicator.start();
+                                })
+                                .catch(function (error) {
+                                    expect(error).toBe(null);
+                                    done();
+                                });
+                    });
+
+                    it('should timeout', function (done) {
+                        var datastore = getDatastore(storeDescription);
+
+                        new ReplicatorBuilder()
+                            .pull()
+                            .from(uri)
+                            .to(datastore)
+                            .addRequestInterceptors(function (context) {
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.headers).toBeDefined();
+                                expect(context.request.headers).not.toBe(null);
+
+                                context.request.headers['x-my-foo-header'] = 'bar';
+                                // NOT calling context.done() to force a timeout
+                            })
+                            .addResponseInterceptors(function (context) {
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.headers).toBeDefined();
+                                expect(context.request.headers).not.toBe(null);
+                                expect(context.request.headers['x-my-foo-header']).not.toBeDefined();
+
+                                context.done();
+
+                            }).build()
+                                .then(function (replicator) {
+                                    expect(replicator).not.toBe(null);
+
+                                    // Shortening the timeout duration
+                                    replicator.interceptors.timeout = 5000;
+
+                                    replicator.on('complete', function(numDocs) {
+                                        expect(numDocs).not.toBe(null);
+
+                                        replicator.datastore.getDocument('aardvark')
+                                            .then(function(documentRevision) {
+                                                expect(documentRevision).not.toBe(null);
+                                                expect(documentRevision._id).not.toBe(null);
+                                                expect(documentRevision._id).toBe('aardvark');
+                                                done();
+                                            });
+                                    });
+
+                                    return replicator.start();
+                                })
+                                .catch(function (error) {
+                                    expect(error).toBe(null);
+                                    done();
+                                });
+                    });
+
+                    it('should execute two interceptors', function (done) {
+                        var datastore = getDatastore(storeDescription);
+
+                        var reqInterceptor1 = function (context) {
+                            expect(context).not.toBe(null);
+                            expect(context.request).toBeDefined();
+                            expect(context.request).not.toBe(null);
+                            expect(context.request.headers).toBeDefined();
+                            expect(context.request.headers).not.toBe(null);
+
+                            context.request.headers['x-my-foo-header'] = 'bar';
+                            context.done();
+                        };
+
+                        var reqInterceptor2 = function (context) {
+                            expect(context).not.toBe(null);
+                            expect(context.request).toBeDefined();
+                            expect(context.request).not.toBe(null);
+                            expect(context.request.headers).toBeDefined();
+                            expect(context.request.headers).not.toBe(null);
+
+                            context.request.headers['x-my-bar-header'] = 'foo';
+                            context.done();
+                        };
+
+                        var resInterceptor1 = function (context) {
+                            expect(context).not.toBe(null);
+                            expect(context.request).toBeDefined();
+                            expect(context.request).not.toBe(null);
+                            expect(context.request.headers).toBeDefined();
+                            expect(context.request.headers).not.toBe(null);
+                            expect(context.request.headers['x-my-foo-header']).toBeDefined();
+                            expect(context.request.headers['x-my-foo-header']).toBe('bar');
+
+                            context.done();
+                        };
+
+                        var resInterceptor2 = function (context) {
+                            expect(context).not.toBe(null);
+                            expect(context.request).toBeDefined();
+                            expect(context.request).not.toBe(null);
+                            expect(context.request.headers).toBeDefined();
+                            expect(context.request.headers).not.toBe(null);
+                            expect(context.request.headers['x-my-bar-header']).toBeDefined();
+                            expect(context.request.headers['x-my-bar-header']).toBe('foo');
+
+                            context.done();
+                        };
+
+                        new ReplicatorBuilder()
+                            .pull()
+                            .from(uri)
+                            .to(datastore)
+                            .addRequestInterceptors(reqInterceptor1, reqInterceptor2)
+                            .addResponseInterceptors(resInterceptor1, resInterceptor2).build()
+                                .then(function (replicator) {
+                                    expect(replicator).not.toBe(null);
+
+                                    // Shortening the timeout duration
+                                    replicator.interceptors.timeout = 5000;
+
+                                    replicator.on('complete', function(numDocs) {
+                                        expect(numDocs).not.toBe(null);
+
+                                        replicator.datastore.getDocument('aardvark')
+                                            .then(function(documentRevision) {
+                                                expect(documentRevision).not.toBe(null);
+                                                expect(documentRevision._id).not.toBe(null);
+                                                expect(documentRevision._id).toBe('aardvark');
+                                                done();
+                                            });
+                                    });
+
+                                    return replicator.start();
+                                })
+                                .catch(function (error) {
+                                    expect(error).toBe(null);
+                                    done();
+                                });
+                    });
+
+                    it('should set the replay flag', function (done) {
+                        var datastore = getDatastore(storeDescription);
+
+                        var numTries = 0;
+                        var url = null;
+                        new ReplicatorBuilder()
+                            .pull()
+                            .from(uri+'doesnotexist')
+                            .to(datastore)
+                            .addRequestInterceptors(function (context) {
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.url).toBeDefined();
+                                expect(context.request.url).not.toBe(null);
+
+                                // capture the first request url
+                                if (!url){
+                                    url = context.request.url;
+                                }
+
+                                context.done();
+                            })
+                            .addResponseInterceptors(function (context) {
+
+                                expect(context).not.toBe(null);
+                                expect(context.request).toBeDefined();
+                                expect(context.request).not.toBe(null);
+                                expect(context.request.url).toBeDefined();
+                                expect(context.request.url).not.toBe(null);
+                                expect(context.response.statusCode).toBeDefined();
+                                expect(context.response.statusCode).not.toBe(null);
+                                expect(context.replayRequest).toBeDefined();
+                                expect(context.replayRequest).not.toBe(null);
+
+                                // Tick up the number of times the first request has been sent
+                                if (context.request.url === url){
+                                    numTries++;
+
+                                    // If the url has only been requested once try again
+                                    if (context.response.statusCode === 404 && numTries < 2){
+                                        context.replayRequest = true;
+                                    }
+                                }
+
+                                context.done();
+
+                            }).build()
+                                .then(function (replicator) {
+                                    expect(replicator).not.toBe(null);
+
+                                    replicator.on('error', function (error) {
+                                        expect(error).not.toBe(null);
+                                        expect(numTries).toBe(2);
+                                        done();
+                                    });
+
+                                    return replicator.start();
+                                })
+                                .catch(function (error) {
+                                    expect(error).toBe(null);
+                                    done();
+                                });
                     });
                 });
             }); // end-Replicator-tests

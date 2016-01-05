@@ -46,4 +46,6 @@
 
 -(void)getReplicationStatus:(CDVInvokedUrlCommand*)command;
 
+-(void)unlockInterceptor:(CDVInvokedUrlCommand*)command;
+
 @end
