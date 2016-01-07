@@ -29,6 +29,8 @@
 
     <js-module src="www/datastoremanager.js" name="DatastoreManager"/>
     <js-module src="www/replicatorbuilder.js" name="ReplicatorBuilder" />
+    <js-module src="www/replicator.js" name="Replicator" />
+    <js-module src="www/httpinterceptors.js" name="HttpInterceptorContext"/>
 
     <engines>
         <engine name="cordova-android" version=">=5.0.0" />
