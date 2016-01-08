@@ -30,6 +30,11 @@
     <js-module src="www/datastoremanager.js" name="DatastoreManager"/>
     <js-module src="www/replicatorbuilder.js" name="ReplicatorBuilder" />
 
+    <engines>
+        <engine name="cordova-android" version=">=5.0.0" />
+        <engine name="cordova-ios" version=">=4.0.0" />
+    </engines>
+
     <!-- ios -->
     <platform name="ios">
         <config-file target="config.xml" parent="/*">

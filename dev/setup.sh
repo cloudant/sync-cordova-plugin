@@ -53,8 +53,8 @@ cordova plugin add $plugin_directory/tests/attachments --link
 cordova plugin add $plugin_directory/tests/dbcreateencrypted --link
 
 echo "Adding platforms..."
-cordova platform add ios
-cordova platform add android
+cordova platform add ios@4.0
+cordova platform add android@5.0
 
 echo "Patching platform assets..."
 cp -f $patch_directory/Podfile $platform_ios_directory/Podfile
