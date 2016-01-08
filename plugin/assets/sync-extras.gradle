@@ -13,14 +13,8 @@
  *
  */
 
-repositories {
-		maven { url "http://cloudant.github.io/cloudant-sync-eap/repository/" }
-}
-
 dependencies {
-		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-core', version:'0.13.4'
-		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android', version:'0.13.4'
-		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android-encryption', version:'0.13.4'
+		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android-encryption', version:'0.15.+'
 }
 
 android {
