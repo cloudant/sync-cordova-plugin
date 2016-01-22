@@ -13,7 +13,7 @@
  *
  */
 
-#import "CDTReplicatorDelegate.h"
+#import <CDTDatastore/CDTReplicatorDelegate.h>
 #import <Cordova/CDVCommandDelegate.h>
 
 @interface CDTSyncPluginDelegate : NSObject<CDTReplicatorDelegate>

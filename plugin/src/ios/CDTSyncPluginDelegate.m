@@ -14,7 +14,7 @@
  */
 
 #import "CDTSyncPluginDelegate.h"
-#import "CDTReplicator.h"
+#import <CDTDatastore/CDTReplicator.h>
 #import <Cordova/CDVPluginResult.h>
 
 @interface CDTSyncPluginDelegate ()

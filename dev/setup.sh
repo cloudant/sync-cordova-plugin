@@ -57,16 +57,9 @@ cordova platform add ios@4.0
 cordova platform add android@5.0
 
 echo "Patching platform assets..."
-cp -f $patch_directory/Podfile $platform_ios_directory/Podfile
 cp -f $patch_directory/$cordova_app_name-info.plist $platform_ios_directory/$cordova_app_name/$cordova_app_name-info.plist
 cp -f $sql_cipher_directory/assets/icudt46l.zip $platform_android_directory/assets/icudt46l.zip
 cp -fr $sql_cipher_directory/libs $platform_android_directory
-
-if [ $( which pod ) ]; then
-    echo "Installing pods..."
-    cd $platform_ios_directory
-    pod install
-fi
 
 cd $app_directory
 echo "Done!"

@@ -43,6 +43,9 @@
             </feature>
         </config-file>
 
+        <framework custom="true" src="libs/ios/CDTDatastore.framework"/>
+
+
         <header-file src="src/ios/CDTSyncPlugin.h" />
         <source-file src="src/ios/CDTSyncPlugin.m" />
 

@@ -14,7 +14,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <CloudantSync.h>
+#import <CDTDatastore/CloudantSync.h>
 #import <Cordova/CDVPlugin.h>
 
 @interface CDTSyncPluginInterceptor : NSObject<CDTHTTPInterceptor>
