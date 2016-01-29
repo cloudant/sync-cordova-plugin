@@ -13,7 +13,7 @@
  *
  */
 
-var utils = require('com.cloudant.sync.utils');
+var utils = require('cloudant-sync.utils');
 
 /**
  * @class HttpInterceptorContext

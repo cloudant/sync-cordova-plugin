@@ -13,8 +13,8 @@
  *
  */
 
-var DatastoreManager = require('com.cloudant.sync.DatastoreManager');
-var Q = require('com.cloudant.sync.q');
+var DatastoreManager = require('cloudant-sync.DatastoreManager');
+var Q = require('cloudant-sync.q');
 
 var DBName = "indexandquerydb";
 var encryptedDBName = DBName + "secure";

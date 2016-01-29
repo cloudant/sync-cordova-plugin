@@ -11,7 +11,7 @@
  either express or implied. See the License for the specific language governing permissions
  and limitations under the License.
  -->
- 
+
 <?xml version="1.0" encoding="UTF-8" ?>
 <plugin id="com.cloudant.sync.test.dbcreate" version="0.1.0-dev" xmlns:android="http://schemas.android.com/apk/res/android" xmlns="http://apache.org/cordova/ns/plugins/1.0">
     <name>Cloudant Sync Plugin Create/Delete Datastore Tests</name>
@@ -19,7 +19,7 @@
     <repo>https://github.com/cloudant/sync-cordova-plugin#:plugin/tests</repo>
 
     <dependency id="cordova-plugin-test-framework"/>
-    <dependency id="com.cloudant.sync" url=".."/>
+    <dependency id="cloudant-sync" url=".."/>
     <js-module name="tests" src="DBCreateTests.js"/>
 
 </plugin>

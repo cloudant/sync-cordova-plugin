@@ -13,11 +13,11 @@
  *
  */
 
-var Q = require('com.cloudant.sync.q');
-var _ = require('com.cloudant.sync.underscore');
-var utils = require('com.cloudant.sync.utils');
-var Datastore = require('com.cloudant.sync.DatastoreManager').Datastore;
-var Replicator = require('com.cloudant.sync.Replicator');
+var Q = require('cloudant-sync.q');
+var _ = require('cloudant-sync.underscore');
+var utils = require('cloudant-sync.utils');
+var Datastore = require('cloudant-sync.DatastoreManager').Datastore;
+var Replicator = require('cloudant-sync.Replicator');
 
 /**
  * @class ReplicatorBuilder

@@ -19,7 +19,7 @@
     <repo>https://hub.jazz.net/git/imfsdk/CloudantToolkit-Hybrid#:plugin/tests/replication</repo>
 
     <dependency id="cordova-plugin-test-framework"/>
-    <dependency id="com.cloudant.sync" url=".."/>
+    <dependency id="cloudant-sync" url=".."/>
     <dependency id="com.cloudant.sync.test.common" url=".."/>
     <js-module name="tests" src="ReplicationTests.js"/>
 

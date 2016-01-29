@@ -12,8 +12,8 @@
  * and limitations under the License.
  *
  */
- 
-var _ = require('com.cloudant.sync.underscore');
+
+var _ = require('cloudant-sync.underscore');
 
 var lastTimestamp = 0;
 
