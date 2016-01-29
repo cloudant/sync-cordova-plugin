@@ -1,5 +1,5 @@
 {
-  "name": "CloudantSync",
+  "name": "cloudant-sync",
   "version": "0.2.0",
   "description": "Cloudant Sync Cordova Plugin",
   "cordova": {
