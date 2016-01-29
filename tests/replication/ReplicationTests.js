@@ -16,13 +16,13 @@
 var DBName = "replicationdb";
 var EncryptedDBName = DBName + "secure";
 try {
-    var DatastoreManager = require('com.cloudant.sync.DatastoreManager');
-    var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
+    var DatastoreManager = require('cloudant-sync.DatastoreManager');
+    var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
 } catch (e) {
     console.log("error: " + e);
 }
-var TestUtil = require('com.cloudant.sync.test.common.TestUtil');
-var Q = require('com.cloudant.sync.q');
+var TestUtil = require('cloudant-sync.test.common.TestUtil');
+var Q = require('cloudant-sync.q');
 
 exports.defineAutoTests = function() {
 

@@ -13,7 +13,7 @@
  *
  */
 
-var DatastoreManager = require('com.cloudant.sync.DatastoreManager');
+var DatastoreManager = require('cloudant-sync.DatastoreManager');
 var DBName = "testdbcreateencrypted";
 exports.defineAutoTests = function() {
     describe('DatastoreManager', function() {

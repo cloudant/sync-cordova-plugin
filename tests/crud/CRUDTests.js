@@ -13,7 +13,7 @@
  *
  */
 
-var DatastoreManager = require( 'com.cloudant.sync.DatastoreManager' );
+var DatastoreManager = require( 'cloudant-sync.DatastoreManager' );
 var DBName = "cruddb";
 var EncryptedDBName = DBName + "secure";
 exports.defineAutoTests = function() {

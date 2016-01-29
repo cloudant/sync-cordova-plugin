@@ -14,13 +14,13 @@
  */
 
 var exec = require('cordova/exec');
-var Q = require('com.cloudant.sync.q');
-var _ = require('com.cloudant.sync.underscore');
-var utils = require('com.cloudant.sync.utils');
+var Q = require('cloudant-sync.q');
+var _ = require('cloudant-sync.underscore');
+var utils = require('cloudant-sync.utils');
 
 /**
  * @class DatastoreManager
- * @description <p><strong>var DatastoreManager = require('com.cloudant.sync.DatastoreManager')</strong></p>
+ * @description <p><strong>var DatastoreManager = require('cloudant-sync.DatastoreManager')</strong></p>
  * @classdesc The {@link DatastoreManager} module is an interface for managing a set of {@link Datastore} objects.
  */
 
