@@ -21,7 +21,7 @@ try {
 } catch (e) {
     console.log("error: " + e);
 }
-var TestUtil = require('cloudant-sync.test.common.TestUtil');
+var TestUtil = require('cloudant-sync-tests.TestUtil');
 var Q = require('cloudant-sync.q');
 
 exports.defineAutoTests = function() {

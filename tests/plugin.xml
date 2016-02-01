@@ -1,0 +1,59 @@
+<!--
+ Copyright (c) 2015 IBM Corp. All rights reserved.
+
+ Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+ except in compliance with the License. You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software distributed under the
+ License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ either express or implied. See the License for the specific language governing permissions
+ and limitations under the License.
+ -->
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<plugin id="cloudant-sync-tests" version="0.1.0-dev" xmlns:android="http://schemas.android.com/apk/res/android" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+    <name>Cloudant Sync Plugin Create/Delete Datastore Tests</name>
+    <keywords>cloudant, sync, cloudant-sync, cloudantsync</keywords>
+    <repo>https://github.com/cloudant/sync-cordova-plugin#:tests</repo>
+
+    <engines>
+        <engine name="cordova-android" version=">=5.0.0" />
+        <engine name="cordova-ios" version=">=4.0.0" />
+    </engines>
+
+    <dependency id="cordova-plugin-test-framework"/>
+    <dependency id="cloudant-sync" />
+    <js-module name="DBCreateTests" src="DBCreateTests.js"/>
+    <js-module name="AttachmentsTests" src="AttachmentsTests.js"/>
+    <js-module name="CRUDTests" src="CRUDTests.js"/>
+    <js-module name="DBCreateEncryptedTests" src="DBCreateEncryptedTests.js"/>
+    <js-module name="IndexAndQueryTests" src="IndexAndQueryTests.js"/>
+    <js-module name="ReplicationTests" src="ReplicationTests.js"/>
+    <js-module name="tests" src="Tests.js" />
+
+    <platform name="android">
+        <js-module src="android/TestUtil.js" name="TestUtil" />
+         <lib-file src="libs/sqlcipher.jar"/>
+         <resource-file src="libs/armeabi/libdatabase_sqlcipher.so" target="libs/armeabi/libdatabase_sqlcipher.so"/>
+         <resource-file src="libs/armeabi/libsqlcipher_android.so" target="libs/armeabi/libsqlcipher_android.so"/>
+         <resource-file src="libs/armeabi/libstlport_shared.so" target="libs/armeabi/libstlport_shared.so"/>
+
+         <resource-file src="libs/armeabi-v7a/libdatabase_sqlcipher.so" target="libs/armeabi-v7a/libdatabase_sqlcipher.so"/>
+         <resource-file src="libs/armeabi-v7a/libsqlcipher_android.so" target="libs/armeabi-v7a/libsqlcipher_android.so"/>
+         <resource-file src="libs/armeabi-v7a/libstlport_shared.so" target="libs/armeabi-v7a/libstlport_shared.so"/>
+
+         <resource-file src="libs/x86/libdatabase_sqlcipher.so" target="libs/x86/libdatabase_sqlcipher.so"/>
+         <resource-file src="libs/x86/libsqlcipher_android.so"  target="libs/x86/libsqlcipher_android.so"/>
+         <resource-file src="libs/x86/libstlport_shared.so" target="libs/x86/libstlport_shared.so"/>
+
+        <resource-file src="assets/icudt46l.zip" target="assets/icudt46l.zip" />
+
+    </platform>
+
+    <platform name="ios">
+        <js-module src="ios/TestUtil.js" name="TestUtil" />
+    </platform>
+
+</plugin>

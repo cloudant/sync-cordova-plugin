@@ -19,7 +19,8 @@ The API is quite different from CouchDB's; we retain the
 [MVCC](http://en.wikipedia.org/wiki/Multiversion_concurrency_control) data
 model but not the HTTP-centric API.
 
-This is a Cordova plugin which complements our [iOS][ios] and [Android][android] libraries.
+This is a Cordova plugin which wraps our [iOS][ios] and [Android][android]
+libraries.
 
 [ios]: https://github.com/cloudant/CDTDatastore
 [android]: https://github.com/cloudant/sync-android
@@ -39,7 +40,7 @@ line.
 Add this plugin to your project via the Cordova CLI.
 
 ```console
-$ cordova plugin add https://github.com/cloudant/sync-cordova-plugin#:plugin
+$ cordova plugin add cloudant-sync
 ```
 
 ### Adding Platforms
@@ -57,41 +58,6 @@ Add iOS as a platform
 ```console
 $ cordova platform add ios
 ```
-Navigate to the generated iOS application
-```console
-$ cd platforms/ios/
-```
-Copy the preconfigured Podfile into your application
-```console
-$ cp ../../plugins/com.cloudant.toolkit/assets/Podfile .
-```
-Update CocoaPods and install
-```console
-$ sudo gem update pods
-$ pod install
-```
-*Note: You may see the message below. It can be safely ignored.*
-```console
-[!] Please close any current Xcode sessions and use `YourAppName.xcworkspace` for this project from now on.
-
-[!] The `YourAppName [Debug]` target overrides the `OTHER_LDFLAGS` build setting defined in `Pods/Target Support Files/Pods/Pods.debug.xcconfig'. This can lead to problems with the CocoaPods installation
-    - Use the `$(inherited)` flag, or
-    - Remove the build settings from the target.
-
-[!] The `YourAppName [Release]` target overrides the `OTHER_LDFLAGS` build setting defined in `Pods/Target Support Files/Pods/Pods.release.xcconfig'. This can lead to problems with the CocoaPods installation
-    - Use the `$(inherited)` flag, or
-    - Remove the build settings from the target.
-```
-
-Next open your native iOS application
-```console
-$ open YourAppName.xcodeproj
-```
-Expand the navigator in Xcode then open a Finder window and locate `yourappname/platforms/ios/Pods`. Drag the `Pods.xcodeproject` project into the Xcode navigator of the **YourAppName** project.  This will add the **Pods** project as a subproject to **YourAppName**.
-
-Next, go to the **Build Phases** of the **YourAppName** build target (under Targets not Project) and add `YourAppName->Pods->Pods` dependency.
-
-Lastly, search for `Other Linker Flags` and add `$(inherited)` to the list.
 
 <!-- TODO update link to sample
 ## Example application
@@ -104,7 +70,7 @@ Once the plugin has been added to a project, the basics are:
 
 Opening a Datastore
 ```js
-var DatastoreManager = require('com.cloudant.sync.DatastoreManager');
+var DatastoreManager = require('cloudant-sync.DatastoreManager');
 
 var datastore;
 DatastoreManager.openDatastore('my_datastore')
@@ -162,7 +128,7 @@ device the the remote database.
 Replication is simple to get started in the common cases:
 
 ```js
-var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
+var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
 
 var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';
 
