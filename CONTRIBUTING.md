@@ -32,6 +32,8 @@ which can be installed via npm.
 ```sh
 $  npm install -g "git+ssh://git@github.com:rhyshort/cordova-paramedic.git"
 ```
+Before running any tests your local CouchDB will need to have a copy of animalDB, this can be replicated
+to your local CouchDB running on 5984 by running the setup.rb script in the root of the repo.
 
 Example: Running the tests on Android using 5.0.x engine. Note: this command must
 be run in the root of the checkout.
