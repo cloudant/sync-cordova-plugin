@@ -28,7 +28,7 @@
 #define kCDTDocDeleted @"_deleted"
 
 #define kCDTDocAttachments @"_attachments"
-#define kCDTDocAttachmentContentType @"content_type"
+#define kCDTDocAttachmentContentType @"contentType"
 #define kCDTDocAttachmentData @"data"
 
 // Query

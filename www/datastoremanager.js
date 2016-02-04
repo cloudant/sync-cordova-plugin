@@ -522,7 +522,7 @@ function save(dbName, documentRevision, callback) {
             attachmentName + ' had no data');
       }
 
-      if (_.isEmpty(attachment.content_type)) {
+      if (_.isEmpty(attachment.contentType)) {
         throw new Error(
             'documentRevision contained invalid attachment.  ' +
             attachmentName + ' had no content_type');
