@@ -5,11 +5,13 @@ var dbCreateEncrypted = require('cloudant-sync-tests.DBCreateEncryptedTests');
 var indexAndQuery = require('cloudant-sync-tests.IndexAndQueryTests');
 var replication = require('cloudant-sync-tests.ReplicationTests');
 
-exports.defineAutoTests = function (){
-    dbCreate.defineAutoTests();
-     attachments.defineAutoTests();
-     crud.defineAutoTests();
-     dbCreateEncrypted.defineAutoTests();
-     indexAndQuery.defineAutoTests();
-     replication.defineAutoTests();
-}
+exports.defineAutoTests = function () {
+  // time out in milliseconds
+  jasmine.DEFAULT_TIMEOUT_INTERVAL = 480000;
+  dbCreate.defineAutoTests();
+  attachments.defineAutoTests();
+  crud.defineAutoTests();
+  dbCreateEncrypted.defineAutoTests();
+  indexAndQuery.defineAutoTests();
+  replication.defineAutoTests();
+};

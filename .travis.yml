@@ -1,0 +1,38 @@
+language: android
+
+services:
+    - couchdb
+
+android:
+  components:
+    # Uncomment the lines below if you want to
+    # use the latest revision of Android SDK Tools
+    - platform-tools
+    - tools
+
+    # The BuildTools version used by your project
+    - build-tools-19.1.0
+
+    # The SDK version used to compile your project
+    - android-23
+
+    # Additional components
+    - extra-google-m2repository
+    - extra-android-m2repository
+
+    # Specify at least one system image,
+    # if you need to run emulator(s) during your tests
+    - sys-img-x86-android-21
+    - sys-img-armeabi-v7a-android-21
+
+before_script:
+    - npm install -g "git+ssh://git@github.com:rhyshort/cordova-paramedic.git"
+    - npm install -g cordova
+    - ./setup.rb
+    #- echo no | android create avd --force -n test -t android-21 --abi x86
+    - echo no | android create avd --force -n test -t android-21 --abi armeabi-v7a
+    - emulator -avd test -no-audio -no-window &
+    - android-wait-for-emulator
+
+script:
+    - cordova-paramedic --platform 'android@5.0' --plugin . --verbose --timeout 3000000
