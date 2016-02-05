@@ -1,0 +1,13 @@
+{
+    "preset": "node-style-guide",
+    "maximumLineLength": 80,
+    "requireCurlyBraces":[
+      "if",
+      "else",
+      "for",
+      "while",
+      "do",
+      "try",
+      "catch",
+  ]
+}

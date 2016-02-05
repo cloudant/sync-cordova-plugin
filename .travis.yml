@@ -28,6 +28,7 @@ android:
 before_script:
     - npm install -g "git+ssh://git@github.com:rhyshort/cordova-paramedic.git"
     - npm install -g cordova
+    - npm install -g jscs
     - ./setup.rb
     #- echo no | android create avd --force -n test -t android-21 --abi x86
     - echo no | android create avd --force -n test -t android-21 --abi armeabi-v7a
@@ -36,3 +37,5 @@ before_script:
 
 script:
     - cordova-paramedic --platform 'android@5.0' --plugin . --verbose --timeout 3000000
+    # for now only check javascript production source files follow guidelines.
+    - jscs ./www/*.js

@@ -72,7 +72,7 @@ exports.defineAutoTests = function() {
                         "ageAdjustment": 10,
                         "_attachments": {
                             "face": {
-                                "content_type": "image/jpeg",
+                                "contentType": "image/jpeg",
                                 "data": todd_image
                             }
                         }
@@ -138,11 +138,11 @@ exports.defineAutoTests = function() {
                             ageAdjustment: 12,
                             _attachments: {
                                 face: {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": dillon_image
                                 },
                                 idolFace: {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": todd_image
                                 }
                             }
@@ -187,11 +187,11 @@ exports.defineAutoTests = function() {
                             ageAdjustment: 12,
                             _attachments: {
                                 face: {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": dillon_image
                                 },
                                 idolFace: {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": todd_image
                                 }
                             }
@@ -283,7 +283,7 @@ exports.defineAutoTests = function() {
                             "age": 30,
                             "_attachments": {
                                 "face": {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": todd_image
                                 }
                             }
@@ -324,7 +324,7 @@ exports.defineAutoTests = function() {
                             }
                         });
 
-                        it("missing content_type", function(done) {
+                        it("missing contentType", function(done) {
                             var datastore = getDatastore(storeDescription);
                             expect(datastore).not.toBe(null);
                             var badAttachments = {
@@ -350,7 +350,7 @@ exports.defineAutoTests = function() {
                             expect(datastore).not.toBe(null);
                             var badAttachments = {
                                 "face": {
-                                    "content_type": "image/jpeg"
+                                    "contentType": "image/jpeg"
                                 }
                             };
 
@@ -377,7 +377,7 @@ exports.defineAutoTests = function() {
                         "ageAdjustment": 10,
                         "_attachments": {
                             "face": {
-                                "content_type": "image/jpeg",
+                                "contentType": "image/jpeg",
                                 "data": todd_image
                             }
                         }
@@ -507,7 +507,7 @@ exports.defineAutoTests = function() {
                             "age": 30,
                             "_attachments": {
                                 "face": {
-                                    "content_type": "image/jpeg",
+                                    "contentType": "image/jpeg",
                                     "data": todd_image
                                 }
                             }
@@ -561,7 +561,7 @@ exports.defineAutoTests = function() {
                             }
                         });
 
-                        it("missing content_type", function(done) {
+                        it("missing contentType", function(done) {
                             var datastore = getDatastore(storeDescription);
                             expect(datastore).not.toBe(null);
                             var badAttachments = {
@@ -592,7 +592,7 @@ exports.defineAutoTests = function() {
                             expect(datastore).not.toBe(null);
                             var badAttachments = {
                                 "face": {
-                                    "content_type": "image/jpeg"
+                                    "contentType": "image/jpeg"
                                 }
                             };
 
@@ -729,11 +729,11 @@ exports.defineAutoTests = function() {
                         age: i,
                         "_attachments": {
                             face: {
-                                "content_type": "image/jpeg",
+                                "contentType": "image/jpeg",
                                 "data": dillon_image
                             },
                             idolFace: {
-                                "content_type": "image/jpeg",
+                                "contentType": "image/jpeg",
                                 "data": todd_image
                             }
                         }
