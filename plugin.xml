@@ -32,6 +32,9 @@
     <js-module src="www/replicator.js" name="Replicator" />
     <js-module src="www/httpinterceptors.js" name="HttpInterceptorContext"/>
 
+    <!-- Cordova deps -->
+    <dependency id="cordova-plugin-file" />
+
     <engines>
         <engine name="cordova-android" version=">=5.0.0" />
         <engine name="cordova-ios" version=">=4.0.0" />

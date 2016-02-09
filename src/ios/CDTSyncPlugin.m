@@ -37,13 +37,24 @@
 #define kCDTQueryLimit      @"limit"
 #define kCDTQuerySkip       @"skip"
 
+
+@interface CDTDatastore (Manager)
+// This property exists on the datastore, it is only declared in the implementation
+// however thus we need this exention.
+    @property (readonly) CDTDatastoreManager * manager;
+@end
+
+@implementation CDTDatastore (Manager)
+@end
+
+
 @interface CDTSyncPlugin ()
 
-@property CDTDatastoreManager *datastoreManager;
 @property NSMutableDictionary *datastoreMap;
 @property NSMutableDictionary *replicatorMap;
 @property NSMutableDictionary *delegateMap;
 @property NSMutableDictionary *interceptorMap;
+@property NSMutableDictionary<NSNumber*,CDTDatastoreManager*> *datastoreManagers;
 
 @end
 
@@ -51,34 +62,36 @@
 
 -(void) pluginInitialize
 {
-    NSError *error = nil;
-    NSFileManager *fileManager= [NSFileManager defaultManager];
-    NSURL *documentsDir = [[fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
-    NSURL *storeURL = [documentsDir URLByAppendingPathComponent: kIMFDataLocalStoreDirectory];
-
-    BOOL isDir;
-    BOOL exists = [fileManager fileExistsAtPath:[storeURL path] isDirectory:&isDir];
-
-
-    if (exists && !isDir) {
-        [NSException raise: @"CDTStorePluginInitalizationFailure" format: NSLocalizedString(@"Failed to create IMFDataManager.  Error: %@",nil), error];
-    }
-
-    if (!exists) {
-        [fileManager createDirectoryAtURL:storeURL withIntermediateDirectories:YES attributes:nil error:&error];
-
-        if (error) {
-            [NSException raise: @"CDTStorePluginInitalizationFailure" format: NSLocalizedString(@"Failed to create IMFDataManager.  Error: %@", nil), error];
-        }
-    }
-
-    self.datastoreManager = [[CDTDatastoreManager alloc] initWithDirectory: [storeURL path] error:&error];
-
     self.datastoreMap = [NSMutableDictionary dictionary];
     self.replicatorMap = [NSMutableDictionary dictionary];
     self.delegateMap = [NSMutableDictionary dictionary];
     self.interceptorMap = [NSMutableDictionary dictionary];
+    self.datastoreManagers = [NSMutableDictionary dictionary];
 }
+
+- (void)createDatastoreManager:(CDVInvokedUrlCommand*)command
+{
+    [self.commandDelegate runInBackground:^{
+        CDVPluginResult * result = nil;
+        NSError *error = nil;
+        NSString *path = [command argumentAtIndex:0];
+
+        CDTDatastoreManager *manager = [[CDTDatastoreManager alloc]initWithDirectory:path error:&error];
+
+
+        if (error){
+            NSString *msg = [NSString stringWithFormat:@"Failed to create DatastoreManager. Error: %@", error];
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:msg];
+        } else {
+            NSNumber *dsmID = @(self.datastoreManagers.count);
+            self.datastoreManagers[dsmID] = manager;
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"id":dsmID}];
+        }
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+
+    }];
+}
+
 
 #pragma mark - Database Create/Delete
 - (void)openDatastore:(CDVInvokedUrlCommand*)command
@@ -88,13 +101,16 @@
         CDVPluginResult* pluginResult = nil;
 
         NSMutableDictionary* result = [NSMutableDictionary dictionary];
-        NSString *name = [command argumentAtIndex:0];
+        NSNumber *datastoreManagerID = [command argumentAtIndex:0];
+        NSString *name = [command argumentAtIndex:1];
+        NSString *keyProviderPassword = [command argumentAtIndex:2];
 
         CDTDatastore *datastore = [self.datastoreMap objectForKey:name];
         NSError *error = nil;
         if(!datastore){
             // If there is no cached store, create one
-            datastore = [self.datastoreManager datastoreNamed:name error:&error];
+            CDTDatastoreManager *manager = self.datastoreManagers[datastoreManagerID];
+            datastore = [manager datastoreNamed:name error:&error];
 
             if(!error && datastore){
                 // Cache the CDTDatastore so that replication does not require the password/identifier again.
@@ -122,10 +138,12 @@
 {
     [self.commandDelegate runInBackground:^{
         CDVPluginResult* pluginResult = nil;
-        NSString *name = [command argumentAtIndex:0];
+        NSNumber *datastoreManagerID = [command argumentAtIndex:0];
+        NSString *name = [command argumentAtIndex:1];
 
         NSError *error;
-        [self.datastoreManager deleteDatastoreNamed:name error:&error];
+        CDTDatastoreManager * manager = self.datastoreManagers[datastoreManagerID];
+        [manager deleteDatastoreNamed:name error:&error];
         [self.datastoreMap removeObjectForKey:name];
 
         if(!error){
@@ -422,14 +440,14 @@
             // pull replication
             CDTPullReplication *pull = [CDTPullReplication replicationWithSource:url target:localstore];
             [pull addInterceptor:interceptor];
-            CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: self.datastoreManager];
+            CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: localstore.manager];
             replicator = [replicatorFactory oneWay:pull error:&error];
         } else if ([type isEqualToString:@"push"]){
             NSError *error = nil;
             // push replication
             CDTPushReplication *push = [CDTPushReplication replicationWithSource:localstore target:url];
             [push addInterceptor:interceptor];
-            CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: self.datastoreManager];
+            CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: localstore.manager];
             replicator = [replicatorFactory oneWay:push error:&error];
             if (replicator){
                 [self.replicatorMap setObject:replicator forKey:[token stringValue]];
