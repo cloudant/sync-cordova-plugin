@@ -96,11 +96,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String REPLICATOR_URI = "uri";
     private static final String REPLICATOR_TYPE = "type";
 
-    private static final String SQLITEDATABASE_CANONICAL_NAME = "net.sqlcipher.database.SQLiteDatabase";
-    private static final String SQLITEDATABASE_LOADLIBS_METHOD_NAME = "loadLibs";
-
     public static DatastoreManager datastoreManager;
-    private static boolean libsLoaded = false;
 
     private static Map<String, Datastore> datastores = Collections.synchronizedMap(new HashMap<String, Datastore>());
     private static Map<String, IndexManager> indexManagers = Collections.synchronizedMap(new HashMap<String, IndexManager>());
@@ -140,10 +136,8 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if (ACTION_OPEN_DATASTORE.equals(action)) {
             final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
-            final String password = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
-            final String identifier = JSONObject.NULL.equals(args.get(2)) ? null : args.getString(2);
 
-            openDatastore(datastoreName, password, identifier, callbackContext);
+            openDatastore(datastoreName,callbackContext);
 
         } else if (ACTION_DELETE_DATASTORE.equals(action)) {
             final String name = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
@@ -246,26 +240,14 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     /**
      * Opens a Datastore with the specified name
      * @param datastoreName - The name of the Datastore to open
-     * @param password - The KeyProvider password (can be null)
-     * @param identifier - The KeyProvider identifier (can be null)
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void openDatastore(final String datastoreName, final String password, final String identifier, final CallbackContext callbackContext) {
+    private void openDatastore(final String datastoreName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds;
-                    if (password != null && !password.isEmpty() && identifier != null && !identifier.isEmpty()) {
-                        if (!libsLoaded) {
-                            loadLibs();
-                        }
-
-                        KeyProvider kp = getKeyProvider(identifier, password);
-                        ds = datastoreManager.openDatastore(datastoreName, kp);
-                    } else {
-                        ds = datastoreManager.openDatastore(datastoreName);
-                    }
+                    Datastore ds = datastoreManager.openDatastore(datastoreName);
                     datastores.put(datastoreName, ds);
                     JSONObject r = new JSONObject();
                     r.put("name", datastoreName);
@@ -655,42 +637,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     ////////////////////////// Internal utility methods ////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    /**
-     * Uses reflection to load SQLCipher JNI libs
-     *
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws InvocationTargetException
-     * @throws IllegalAccessException
-     */
-    @SuppressWarnings("unchecked")
-    private void loadLibs() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        ClassLoader classLoader = this.getClass().getClassLoader();
-        Class sqlDatabase = classLoader.loadClass(SQLITEDATABASE_CANONICAL_NAME);
-        Method method = sqlDatabase.getDeclaredMethod(SQLITEDATABASE_LOADLIBS_METHOD_NAME, Context.class);
-        method.invoke(null, cordova.getActivity().getApplication().getApplicationContext());
-        libsLoaded = true;
-    }
-
-    /**
-     * @param identifier - The DPK identifier
-     * @param password   - The DPK password
-     * @return - The KeyProvider for accessing the Data Protection Key (DPK)
-     */
-    private KeyProvider getKeyProvider(String identifier, String password) {
-        KeyProvider kp;
-        Map<String, KeyProvider> identifierMap = (keyProviders.get(identifier) != null) ? keyProviders.get(identifier) : Collections.synchronizedMap(new HashMap<String, KeyProvider>());
-        kp = identifierMap.get(password);
-
-        if (kp == null) {
-            kp = new CachingKeyProvider(new AndroidKeyProvider(this.cordova.getActivity().getApplication().getApplicationContext(), password, identifier));
-            identifierMap.put(password, kp);
-        }
-
-        return kp;
-    }
 
     /**
      * @param datastoreName - The name of the associated Datastore

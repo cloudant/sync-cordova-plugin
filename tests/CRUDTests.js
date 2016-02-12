@@ -15,7 +15,6 @@
 
 var DatastoreManager = require( 'cloudant-sync.DatastoreManager' );
 var DBName = "cruddb";
-var EncryptedDBName = DBName + "secure";
 exports.defineAutoTests = function() {
     describe( 'Datastore', function() {
 
@@ -25,39 +24,21 @@ exports.defineAutoTests = function() {
         };
 
         var localStore = null;
-        var encryptedStore = null;
 
         var storeName = null;
-        var encryptedStoreName = null;
 
         function getDatastore( datastoreDescription ) {
-            var datastore;
-            switch ( datastoreDescription ) {
-                case "local":
-                    datastore = localStore;
-                    break;
-                case "encrypted":
-                    datastore = encryptedStore;
-                    break;
-            }
-            return datastore;
+            return localStore;
         }
 
         beforeEach( function( done ) {
-          if (!localStore || !encryptedStore) {
+          if (!localStore) {
             DatastoreManager.deleteDatastore( DBName )
-                .then( function() {
-                    return DatastoreManager.deleteDatastore( EncryptedDBName );
-                } )
                 .then( function() {
                     return DatastoreManager.openDatastore( DBName );
                 } )
                 .then( function(newLocalStore) {
                   localStore = newLocalStore;
-                    return DatastoreManager.openDatastore( EncryptedDBName, validEncryptionOptions );
-                } )
-                .then(function(newEncryptedLocalStore){
-                  encryptedStore = newEncryptedLocalStore;
                 })
                 .catch( function( error ) {
                     console.error( error );
@@ -669,6 +650,5 @@ exports.defineAutoTests = function() {
         }
 
          testCRUD( "local" );
-        testCRUD( "encrypted" );
     } );
 };

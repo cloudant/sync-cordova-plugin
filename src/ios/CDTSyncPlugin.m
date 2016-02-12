@@ -89,20 +89,12 @@
 
         NSMutableDictionary* result = [NSMutableDictionary dictionary];
         NSString *name = [command argumentAtIndex:0];
-        NSString *keyProviderPassword = [command argumentAtIndex:1];
-        NSString *keyProviderId = [command argumentAtIndex:2];
 
         CDTDatastore *datastore = [self.datastoreMap objectForKey:name];
         NSError *error = nil;
         if(!datastore){
             // If there is no cached store, create one
-
-            if (keyProviderPassword && keyProviderId){
-                id<CDTEncryptionKeyProvider> keyProvider = [CDTEncryptionKeychainProvider providerWithPassword:keyProviderPassword forIdentifier:keyProviderId];
-                datastore = [self.datastoreManager datastoreNamed:name withEncryptionKeyProvider:keyProvider error:&error];
-            } else {
-                datastore = [self.datastoreManager datastoreNamed:name error:&error];
-            }
+            datastore = [self.datastoreManager datastoreNamed:name error:&error];
 
             if(!error && datastore){
                 // Cache the CDTDatastore so that replication does not require the password/identifier again.

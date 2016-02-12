@@ -37,11 +37,6 @@ var utils = require('cloudant-sync.utils');
  *
  * @function DatastoreManager#openDatastore
  * @param {String} name - The name of the {@link Datastore} to open
- * @param {Object} [encryptionOptions] - Options used for encrypting the
- *  {@link Datastore}.
- * @param {String} encryptionOptions.password - A user-provided password.
- * @param {String} encryptionOptions.identifier - A unique identifier for
- * retrieving the encryption key.
  * @param {DatastoreManager~openDatastoreCallback} [callback] - The function to
  *  call after attempting to open the Datastore.
  *
@@ -50,7 +45,7 @@ var utils = require('cloudant-sync.utils');
  * either a {@link Datastore} or an Error.
  *
  */
-exports.openDatastore = function(name, encryptionOptions, callback) {
+exports.openDatastore = function(name, callback) {
   if (_.isEmpty(name)) {
     throw new Error('name must exist');
   }
@@ -58,11 +53,6 @@ exports.openDatastore = function(name, encryptionOptions, callback) {
   if (!_.isString(name)) {
     throw new Error('name must be a String');
   }
-
-  encryptionOptions = encryptionOptions || {
-    password: null,
-    identifier: null,
-  };
 
   if (typeof encryptionOptions === 'function') {
     // No encryption options specified
@@ -73,30 +63,6 @@ exports.openDatastore = function(name, encryptionOptions, callback) {
     };
   }
 
-  if (!_.isEmpty(encryptionOptions) && !_.isObject(encryptionOptions)) {
-    throw new Error('encryptionOptions must be an Object');
-  }
-
-  if ((!_.isEmpty(encryptionOptions.password) && _.isEmpty(
-          encryptionOptions.identifier)) || (!_.isEmpty(
-          encryptionOptions.identifier) && _.isEmpty(
-          encryptionOptions.password))) {
-    // Either password was specified without identifier or vice versa
-    throw new Error(
-        'Both password and identifier must be specified or neither must' +
-        ' be specified'
-    );
-  }
-
-  if ((!_.isEmpty(encryptionOptions.password) && !_.isEmpty(
-          encryptionOptions.identifier)) && (!_.isString(
-          encryptionOptions.password) || !_.isString(
-          encryptionOptions.identifier))) {
-    // Both password and identifier specified but one was not a String
-    throw new Error(
-        'Both password and identifier must be String values'
-    );
-  }
 
   var deferred = Q.defer();
 
@@ -109,9 +75,7 @@ exports.openDatastore = function(name, encryptionOptions, callback) {
     deferred.reject(error);
   }
 
-  exec(successHandler, errorHandler, 'CloudantSync', 'openDatastore', [name,
-      encryptionOptions.password, encryptionOptions.identifier,
-  ]);
+  exec(successHandler, errorHandler, 'CloudantSync', 'openDatastore', [name,]);
 
   deferred.promise.nodeify(callback);
   return deferred.promise;

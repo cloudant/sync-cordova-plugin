@@ -28,7 +28,6 @@
     <js-module name="DBCreateTests" src="DBCreateTests.js"/>
     <js-module name="AttachmentsTests" src="AttachmentsTests.js"/>
     <js-module name="CRUDTests" src="CRUDTests.js"/>
-    <js-module name="DBCreateEncryptedTests" src="DBCreateEncryptedTests.js"/>
     <js-module name="IndexAndQueryTests" src="IndexAndQueryTests.js"/>
     <js-module name="ReplicationTests" src="ReplicationTests.js"/>
     <js-module name="tests" src="Tests.js" />
