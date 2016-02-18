@@ -14,7 +14,6 @@
  */
 
 var DBName = "replicationdb";
-var EncryptedDBName = DBName + "secure";
 try {
     var DatastoreManager = require('cloudant-sync.DatastoreManager');
     var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
@@ -28,10 +27,6 @@ exports.defineAutoTests = function() {
 
     describe('Replication', function() {
 
-        var validEncryptionOptions = {
-            password: 'passw0rd',
-            identifier: 'toolkit'
-        };
 
         var badtoken = 'badtoken';
         var badtype = 'badtype';
@@ -40,39 +35,21 @@ exports.defineAutoTests = function() {
 
         var uri = TestUtil.LOCAL_COUCH_URL + '/animaldb';
         var localStore = null;
-        var encryptedStore = null;
         var storeName = null;
-        var encryptedStoreName = null;
 
         var defaultTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
 
         function getDatastore(storeDescription) {
-            var datastore;
-            switch (storeDescription) {
-                case "local":
-                    datastore = localStore;
-                    break;
-                case "encrypted":
-                    datastore = encryptedStore;
-                    break;
-            }
-            return datastore;
+            return localStore;
         }
         beforeEach(function(done) {
-          if (!localStore || !encryptedStore){
+          if (!localStore){
             DatastoreManager.deleteDatastore(DBName)
-                .then(function() {
-                    return DatastoreManager.deleteDatastore(EncryptedDBName);
-                })
                 .then(function() {
                     return DatastoreManager.openDatastore(DBName);
                 })
                 .then(function(newLocalStore) {
                     localStore = newLocalStore;
-                    return DatastoreManager.openDatastore(EncryptedDBName, validEncryptionOptions);
-                })
-                .then(function(newEncryptedLocalStore) {
-                    encryptedStore = newEncryptedLocalStore;
                 })
                 .catch(function(error) {
                     console.error(error);
@@ -2262,6 +2239,5 @@ exports.defineAutoTests = function() {
         }
 
         testReplication("local");
-        testReplication("encrypted");
     });
 };
