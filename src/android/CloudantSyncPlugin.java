@@ -68,6 +68,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     private static final String ACTION_CREATE_DATASTORE_MANAGER = "createDatastoreManager";
     private static final String ACTION_OPEN_DATASTORE = "openDatastore";
+    private static final String ACTION_CLOSE_DATASTORE = "closeDatastore";
     private static final String ACTION_DELETE_DATASTORE = "deleteDatastore";
     private static final String ACTION_SAVE = "save";
     private static final String ACTION_GET_DOCUMENT = "getDocument";
@@ -126,6 +127,8 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
             openDatastore(datastoreManagerId, datastoreName, callbackContext);
 
+        } else if (ACTION_CLOSE_DATASTORE.equals(action)) {
+            closeDatastore(args, callbackContext);
         } else if (ACTION_DELETE_DATASTORE.equals(action)) {
             final int datastoreManagerId = args.getInt(0);
             final String name = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
@@ -275,6 +278,26 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     callbackContext.success(r);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void closeDatastore(final JSONArray args, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable(){
+            @Override
+            public void run() {
+                try{
+                    Datastore ds = datastores.remove(args.getString(0));
+                    if(ds == null){
+                        callbackContext.error("Datastore is not open");
+                        return;
+                    }
+
+                    ds.close();
+                    callbackContext.success();
+                } catch (Exception e){
+                    callbackContext.error("Datastore could not be closed");
                 }
             }
         });

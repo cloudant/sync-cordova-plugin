@@ -226,6 +226,38 @@ function Datastore(name) {
 
 exports.Datastore = Datastore;
 
+
+/**
+ * @summary Closes the datastore and releases native resources.
+ *
+ * @description Closes the datastore and releases native resources, once closed
+ * a datastore can not be reused.
+ *
+ * @param {Datastore~closeCallback} [callback] function to call after the
+ * datastore has been closed.
+ *
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q}.
+ */
+Datastore.prototype.close = function(callback) {
+  var defer = Q.defer();
+
+  function success() {
+    defer.resolve();
+  }
+
+  function failed(err) {
+    defer.reject(err);
+  }
+
+
+  exec(success , failed, 'CloudantSync', 'closeDatastore', [this.name]);
+
+  defer.promise.nodeify(callback);
+  return defer.promise;
+
+
+};
+
 /**
  * @summary Adds a new document with body and attachments from revision.
  * @description If '_id' in the revision is null or undefined, the document's
@@ -649,3 +681,8 @@ function save(dbName, documentRevision, callback) {
  * @param {?Error} error
  * @param {Array} results - The query results.
  */
+
+ /**
+  * @callback Datastore~closeCallback
+  * @param {?Error} error
+  */

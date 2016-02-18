@@ -134,6 +134,14 @@
     }];
 }
 
+- (void)closeDatastore:(CDVInvokedUrlCommand *) command
+{
+    // CDTDatastore doesn't have a close method, so just return success
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+
+}
+
 -(void)deleteDatastore:(CDVInvokedUrlCommand *)command
 {
     [self.commandDelegate runInBackground:^{
