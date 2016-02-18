@@ -1,4 +1,4 @@
-# Contributing to CloudantToolkit-Hybrid
+# Contributing
 This document covers information for contributing to this project.
 
 ## Development Requirements
