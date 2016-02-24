@@ -301,7 +301,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined);
+                datastore.createDocumentFromRevision(toddRedefined);
                 expect(true).toBe(false);
                 done();
               } catch (error) {
@@ -319,7 +319,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined);
+                datastore.createDocumentFromRevision(toddRedefined);
                 expect(true).toBe(false);
                 done();
               } catch (error) {
@@ -339,7 +339,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined);
+                datastore.createDocumentFromRevision(toddRedefined);
                 expect(true).toBe(false);
                 done();
               } catch (error) {
@@ -360,7 +360,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined);
+                datastore.createDocumentFromRevision(toddRedefined);
                 expect(true).toBe(false);
                 done();
               } catch (error) {
@@ -526,7 +526,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined)
+                datastore.createDocumentFromRevision(toddRedefined)
                                     .then(function() {
                                       expect(true).toBe(false);
                                     })
@@ -550,7 +550,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined)
+                datastore.createDocumentFromRevision(toddRedefined)
                                     .then(function() {
                                       expect(true).toBe(false);
                                     })
@@ -576,7 +576,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined)
+                datastore.createDocumentFromRevision(toddRedefined)
                                     .then(function() {
                                       expect(true).toBe(false);
                                     })
@@ -602,7 +602,7 @@ exports.defineAutoTests = function() {
 
               toddRedefined._attachments = badAttachments;
               try {
-                datastore.save(toddRedefined)
+                datastore.createDocumentFromRevision(toddRedefined)
                                     .then(function() {
                                       expect(true).toBe(false);
                                     })
