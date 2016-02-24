@@ -66,6 +66,7 @@ import java.util.Map;
 public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String TAG = CloudantSyncPlugin.class.getCanonicalName();
 
+    private static final String ACTION_CREATE_DATASTORE_MANAGER = "createDatastoreManager";
     private static final String ACTION_OPEN_DATASTORE = "openDatastore";
     private static final String ACTION_DELETE_DATASTORE = "deleteDatastore";
     private static final String ACTION_SAVE = "save";
@@ -81,7 +82,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String ACTION_GET_REPLICATION_STATUS = "getReplicationStatus";
     private static final String ACTION_UNLOCK_INTERCEPTOR = "unlockInterceptor";
 
-    private static final String DatastoreDir = "hybriddatastores";
     private static final String DATASTORE_NAME = "name";
 
     private static final String DOC_ID = "_id";
@@ -96,34 +96,18 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String REPLICATOR_URI = "uri";
     private static final String REPLICATOR_TYPE = "type";
 
-    public static DatastoreManager datastoreManager;
+    private static final String SQLITEDATABASE_CANONICAL_NAME = "net.sqlcipher.database.SQLiteDatabase";
+    private static final String SQLITEDATABASE_LOADLIBS_METHOD_NAME = "loadLibs";
+
+    private static final String DEFAULT_DATASTORE_DIR_NAME = "CloudantSync";
+
 
     private static Map<String, Datastore> datastores = Collections.synchronizedMap(new HashMap<String, Datastore>());
     private static Map<String, IndexManager> indexManagers = Collections.synchronizedMap(new HashMap<String, IndexManager>());
     private static Map<Integer, Replicator> replicators = Collections.synchronizedMap(new HashMap<Integer, Replicator>());
     private static Map<Integer, SyncPluginInterceptor> interceptors = Collections.synchronizedMap(new HashMap<Integer, SyncPluginInterceptor>());
     private static Map<String, Map<String, KeyProvider>> keyProviders = Collections.synchronizedMap(new HashMap<String, Map<String, KeyProvider>>());
-
-    /**
-     * Constructor.
-     */
-    public CloudantSyncPlugin() {
-    }
-
-    /**
-     * Sets the context of the Command. This can then be used to do things like
-     * get file paths associated with the Activity.
-     *
-     * @param cordova The context of the main Activity.
-     * @param webView The CordovaWebView Cordova is running in.
-     */
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-        // Create a DatastoreManager
-        Context context = cordova.getActivity().getApplicationContext();
-        File path = context.getDir(DatastoreDir, Context.MODE_PRIVATE);
-        datastoreManager = new DatastoreManager(path.getAbsolutePath());
-    }
+    private static Map<Integer, DatastoreManager> datastoreManagers = Collections.synchronizedMap(new HashMap<Integer,DatastoreManager>());
 
     /**
      * Executes the request and returns PluginResult.
@@ -134,15 +118,19 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @return True if the action was valid, false if not.
      */
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-        if (ACTION_OPEN_DATASTORE.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+        if (ACTION_CREATE_DATASTORE_MANAGER.equals(action)) {
+            createDatastoreManager(args,callbackContext);
+        } else if (ACTION_OPEN_DATASTORE.equals(action)) {
+            final int datastoreManagerId = args.getInt(0);
+            final String datastoreName = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            openDatastore(datastoreName,callbackContext);
+            openDatastore(datastoreManagerId, datastoreName, callbackContext);
 
         } else if (ACTION_DELETE_DATASTORE.equals(action)) {
-            final String name = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final int datastoreManagerId = args.getInt(0);
+            final String name = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            deleteDatastore(name, callbackContext);
+            deleteDatastore(datastoreManagerId, name, callbackContext);
 
         } else if (ACTION_SAVE.equals(action)) {
             final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
@@ -237,17 +225,50 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+    private void createDatastoreManager(JSONArray args, final CallbackContext callbackContext) throws JSONException {
+        //create the datastore
+        final String path;
+        if(JSONObject.NULL.equals(args.get(0))){
+            Context context = cordova.getActivity().getApplicationContext();
+            File fp = context.getDir(DEFAULT_DATASTORE_DIR_NAME, Context.MODE_PRIVATE);
+            path = fp.getAbsolutePath();
+        } else {
+            path = args.getString(0);
+        }
+
+        cordova.getThreadPool().execute(new Runnable (){
+            @Override
+            public void run(){
+                DatastoreManager dm = new DatastoreManager(path);
+                int id = datastoreManagers.size();
+                // Auto-boxing id.
+                datastoreManagers.put(id, dm);
+                JSONObject response = new JSONObject();
+                try {
+                    response.put("id",id); }
+                catch (JSONException e){
+                    // This should never happen, terminate
+                    throw new RuntimeException(e);
+                }
+                callbackContext.success(response);
+            }
+        });
+    }
+
+
     /**
      * Opens a Datastore with the specified name
      * @param datastoreName - The name of the Datastore to open
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void openDatastore(final String datastoreName, final CallbackContext callbackContext) {
+    private void openDatastore(final int datastoreManagerID, final String datastoreName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = datastoreManager.openDatastore(datastoreName);
+                    // Auto-boxing of datastoreManagerID
+                    DatastoreManager dsm = datastoreManagers.get(datastoreManagerID);
+                    Datastore ds = dsm.openDatastore(datastoreName);
                     datastores.put(datastoreName, ds);
                     JSONObject r = new JSONObject();
                     r.put("name", datastoreName);
@@ -264,7 +285,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @param datastoreName - The name of the Datastore to delete
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void deleteDatastore(final String datastoreName, final CallbackContext callbackContext) {
+    private void deleteDatastore(final int datastoreManagerID, final String datastoreName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
@@ -283,7 +304,9 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     indexManagers.remove(datastoreName);
 
                     try {
-                        datastoreManager.deleteDatastore(datastoreName);
+                        // Auto-boxing of datastore manager.
+                        DatastoreManager manager = datastoreManagers.get(datastoreManagerID);
+                        manager.deleteDatastore(datastoreName);
                     } catch (IOException e) {
                         Log.e(TAG, "Error deleting from disk Datastore: " + datastoreName, e);
                     }

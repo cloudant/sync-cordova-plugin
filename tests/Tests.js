@@ -6,7 +6,7 @@ var replication = require('cloudant-sync-tests.ReplicationTests');
 
 exports.defineAutoTests = function() {
   // Time out in milliseconds
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 480000;
+  jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
   dbCreate.defineAutoTests();
   attachments.defineAutoTests();
   crud.defineAutoTests();

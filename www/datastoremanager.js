@@ -29,6 +29,72 @@ var utils = require('cloudant-sync.utils');
  */
 
 /**
+* @description Creates a datastore manager object
+* @param options {Object} options to use when creating the DatastoreManager
+*  this only supports the `path` option which is the location where datastores
+*  should be placed on disk.
+* @param callback {Function} a function to call on completion, it should match
+*  the signature: function ( err, datastoreManager)
+*
+* @return  A [q style promise]{@link https://github.com/kriskowal/q} returning
+* either a {@link Datastore} or an Error.
+*/
+exports.DatastoreManager = function(options, callback) {
+
+  var dsm = new DatastoreManager(options);
+  var defered = Q.defer();
+
+  function successHandler(response) {
+    dsm.dsmID = response.id;
+    defered.resolve(dsm);
+  }
+
+  function errorHandler(error) {
+    defered.reject(error);
+  }
+
+  exec(successHandler, errorHandler, 'CloudantSync', 'createDatastoreManager',
+        [dsm.path]);
+
+  defered.promise.nodeify(callback);
+  return defered.promise;
+
+};
+
+/**
+ * @summary Creates a DatastoreMananger oobject
+ * @constructor
+ * @param {Object} options to use when creating the datastore.
+ *
+ */
+function DatastoreManager(options) {
+
+  if (options === undefined) {
+    options = {};
+  }
+
+  if (options.path !== undefined   && !_.isString(options.path)) {
+    throw new Error('path option must be a string');
+  } else if (options.path === undefined) {
+    options.path = cordova.file.dataDirectory;
+
+    if (options.path.indexOf('/', options.path.length - 1) === -1) {
+      options.path = options.path + '/';
+    }
+
+    options.path = options.path + 'CloudantSync';
+  }
+
+  // If the path starts with file:// strip it.
+  if (options.path.indexOf('file://') !== -1) {
+    options.path = options.path.substring(7);
+  }
+
+  this.path = options.path;
+
+}
+
+/**
  * @summary Opens a {@link Datastore}.
  * @description If there is no existing {@link Datastore} with the given name
  * on disk then one will be created.
@@ -45,7 +111,8 @@ var utils = require('cloudant-sync.utils');
  * either a {@link Datastore} or an Error.
  *
  */
-exports.openDatastore = function(name, callback) {
+DatastoreManager.prototype.openDatastore =
+function(name, callback) {
   if (_.isEmpty(name)) {
     throw new Error('name must exist');
   }
@@ -75,7 +142,13 @@ exports.openDatastore = function(name, callback) {
     deferred.reject(error);
   }
 
-  exec(successHandler, errorHandler, 'CloudantSync', 'openDatastore', [name,]);
+  exec(successHandler,
+      errorHandler,
+      'CloudantSync',
+      'openDatastore',
+      [this.dsmID,
+          name,]
+  );
 
   deferred.promise.nodeify(callback);
   return deferred.promise;
@@ -96,7 +169,7 @@ exports.openDatastore = function(name, callback) {
  * returns successfully or with Error.
  *
  */
-exports.deleteDatastore = function(name, callback) {
+DatastoreManager.prototype.deleteDatastore = function(name, callback) {
   if (_.isEmpty(name)) {
     throw new Error('name must exist');
   }
@@ -115,7 +188,11 @@ exports.deleteDatastore = function(name, callback) {
     deferred.reject(error);
   }
 
-  exec(successHandler, errorHandler, 'CloudantSync', 'deleteDatastore', [name]);
+  exec(successHandler,
+      errorHandler,
+      'CloudantSync',
+      'deleteDatastore',
+    [this.dsmID, name]);
 
   deferred.promise.nodeify(callback);
   return deferred.promise;

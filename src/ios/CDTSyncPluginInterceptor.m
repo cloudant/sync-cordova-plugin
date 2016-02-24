@@ -100,7 +100,7 @@
 
     // Lock and wait for JavaScript to response
     dispatch_semaphore_t jsCallbackSemaphore = dispatch_semaphore_create(0);
-    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, 5*(60*NSEC_PER_SEC));
+    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, 60*NSEC_PER_SEC);
 
     // Cache the lock and context for use in updateContext
     [self.mapLock lock];
@@ -181,7 +181,7 @@
 
     // Lock and wait for JavaScript to response
     dispatch_semaphore_t jsCallbackSemaphore = dispatch_semaphore_create(0);
-    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, 5*(60*NSEC_PER_SEC));
+    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, 60*NSEC_PER_SEC);
 
     // Cache the lock and context for use in updateContext
     [self.mapLock lock];

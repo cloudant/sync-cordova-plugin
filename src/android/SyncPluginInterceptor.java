@@ -111,7 +111,7 @@ class SyncPluginInterceptor implements HttpConnectionRequestInterceptor, HttpCon
 
         // Lock and wait for JavaScript to respond
         try {
-            responseLatch.await(5, TimeUnit.MINUTES);
+            responseLatch.await(60, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Log.e(TAG, "Replication interceptor timed out", e);
         }
@@ -176,7 +176,7 @@ class SyncPluginInterceptor implements HttpConnectionRequestInterceptor, HttpCon
 
         // Lock and wait for JavaScript to respond
         try {
-            requestLatch.await(5, TimeUnit.MINUTES);
+            requestLatch.await(60, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Log.e(TAG, "Replication interceptor timed out", e);
         }

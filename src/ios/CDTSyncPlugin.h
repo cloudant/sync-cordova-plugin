@@ -16,8 +16,6 @@
 #import <UIKit/UIKit.h>
 #import <Cordova/CDVPlugin.h>
 
-#define kIMFDataLocalStoreDirectory    @"hybriddatastores"
-
 @interface CDTSyncPlugin : CDVPlugin
 
 -(void)openDatastore:(CDVInvokedUrlCommand*)command;
@@ -47,5 +45,7 @@
 -(void)getReplicationStatus:(CDVInvokedUrlCommand*)command;
 
 -(void)unlockInterceptor:(CDVInvokedUrlCommand*)command;
+
+-(void)createDatastoreManager:(CDVInvokedUrlCommand*)command;
 
 @end

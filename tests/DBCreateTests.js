@@ -13,364 +13,373 @@
  *
  */
 
-var DatastoreManager = require('cloudant-sync.DatastoreManager');
-var DBName = "testdbcreate";
+var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManager;
+var DBName = 'testdbcreate';
 exports.defineAutoTests = function() {
-    describe('DatastoreManager', function() {
+  describe('DatastoreManager', function() {
 
-        beforeEach(function(done) {
-            DatastoreManager.deleteDatastore(DBName)
-                .fin(done);
+    var manager;
+
+    beforeAll(function createManager(done) {
+      DatastoreManager().then(function(m) {
+        manager = m;
+        done();
+      });
+    });
+
+    beforeEach(function(done) {
+      manager.openDatastore(DBName)
+          .then(done);
+    });
+
+    afterEach(function(done) {
+      manager.deleteDatastore(DBName)
+          .fin(done);
+    });
+
+    it('should exist', function() {
+      expect(DatastoreManager).toBeDefined();
+    });
+
+    it('should contain method openDatastore', function() {
+      expect(manager.openDatastore).toBeDefined();
+    });
+
+    it('should contain method deleteDatastore', function() {
+      expect(manager.openDatastore).toBeDefined();
+    });
+
+    describe('.openDatastore(name, [callback])', function() {
+      describe('Callbacks', function() {
+        it('should create a Datastore', function(done) {
+          var storeName = DBName;
+
+          manager.openDatastore(storeName, function(error,
+              createdStore) {
+            if (error) {
+              console.log(error);
+            }
+            expect(error).toBe(null);
+            expect(createdStore).not.toBe(
+                null);
+            expect(createdStore.name).toBe(
+                storeName);
+            done();
+          });
         });
 
-        afterEach(function(done) {
-            DatastoreManager.deleteDatastore(DBName)
-                .fin(done);
+        it('should fail create a Datastore with missing name parameter', function(
+            done) {
+          try {
+            manager.openDatastore(function(error, result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+
         });
 
-        it('should exist', function() {
-            expect(DatastoreManager).toBeDefined();
+        it('should fail create a Datastore with null name', function(done) {
+          try {
+            manager.openDatastore(null, function(error,
+                result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+
         });
 
-        it("should contain method openDatastore", function() {
-            expect(DatastoreManager.openDatastore).toBeDefined();
+        it('should fail create a Datastore with empty name', function(done) {
+          try {
+            manager.openDatastore('', function(error, result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+
         });
 
-        it("should contain method deleteDatastore", function() {
-            expect(DatastoreManager.openDatastore).toBeDefined();
+        it('should fail create a Datastore with name of wrong type', function(
+            done) {
+          try {
+            manager.openDatastore(['foo'], function(error,
+                result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+
         });
+      }); // End callback tests
 
-        describe('.openDatastore(name, [callback])', function() {
-            describe('Callbacks', function() {
-                it("should create a Datastore", function(done) {
-                    var storeName = DBName;
+      describe('Promise Tests', function() {
+        it('should create a Datastore', function(done) {
+          var storeName = DBName;
 
-                    DatastoreManager.openDatastore(storeName, function(error,
-                        createdStore) {
-                        if (error) {
-                            console.log(error);
-                        }
-                        expect(error).toBe(null);
-                        expect(createdStore).not.toBe(
-                            null);
-                        expect(createdStore.name).toBe(
-                            storeName);
-                        done();
-                    });
-                });
-
-                it("should fail create a Datastore with missing name parameter", function(
-                    done) {
-                    try {
-                        DatastoreManager.openDatastore(function(error, result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-
-                });
-
-                it("should fail create a Datastore with null name", function(done) {
-                    try {
-                        DatastoreManager.openDatastore(null, function(error,
-                            result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-
-                });
-
-                it("should fail create a Datastore with empty name", function(done) {
-                    try {
-                        DatastoreManager.openDatastore("", function(error, result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-
-                });
-
-                it("should fail create a Datastore with name of wrong type", function(
-                    done) {
-                    try {
-                        DatastoreManager.openDatastore(['foo'], function(error,
-                            result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-
-                });
-            }); // end callback tests
-
-            describe('Promise Tests', function() {
-                it("should create a Datastore", function(done) {
-                    var storeName = DBName;
-
-                    DatastoreManager.openDatastore(storeName)
+          manager.openDatastore(storeName)
                         .then(function(createdStore) {
-                            expect(createdStore).not.toBe(
-                                null);
-                            expect(createdStore.name).toBe(
-                                storeName);
+                          expect(createdStore).not.toBe(
+                              null);
+                          expect(createdStore.name).toBe(
+                              storeName);
                         })
                         .fin(done);
-                });
+        });
 
-                it("should fail create a Datastore with missing name parameter", function(
-                    done) {
-                    try {
-                        DatastoreManager.openDatastore()
+        it('should fail create a Datastore with missing name parameter', function(
+            done) {
+          try {
+            manager.openDatastore()
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
 
-                });
+        });
 
-                it("should fail create a Datastore with null name parameter", function(
-                    done) {
-                    try {
-                        DatastoreManager.openDatastore(null)
+        it('should fail create a Datastore with null name parameter', function(
+            done) {
+          try {
+            manager.openDatastore(null)
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
 
-                });
+        });
 
-                it("should fail create a Datastore with empty name parameter", function(
-                    done) {
-                    try {
-                        DatastoreManager.openDatastore("")
+        it('should fail create a Datastore with empty name parameter', function(
+            done) {
+          try {
+            manager.openDatastore('')
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it("should fail create a Datastore with name parameter wrong type",
+        it('should fail create a Datastore with name parameter wrong type',
                     function(done) {
-                        try {
-                            DatastoreManager.openDatastore(['foo'])
+                      try {
+                        manager.openDatastore(['foo'])
                                 .then(function(result) {
-                                    expect(true).toBe(false);
+                                  expect(true).toBe(false);
                                 })
                                 .catch(function(error) {
-                                    expect(true).toBe(false);
+                                  expect(true).toBe(false);
                                 });
-                            expect(true).toBe(false);
-                            done();
-                        } catch (error) {
-                            expect(error).not.toBe(null);
-                            done();
-                        }
+                        expect(true).toBe(false);
+                        done();
+                      } catch (error) {
+                        expect(error).not.toBe(null);
+                        done();
+                      }
                     });
-            }); // end promise tests
-        }); // end openDatastore tests
+      }); // End promise tests
+    }); // End openDatastore tests
 
-        describe('.deleteDatastore(name, [callback])', function() {
+    describe('.deleteDatastore(name, [callback])', function() {
 
-            describe('Callbacks', function() {
-                it('should delete a Datastore', function(done) {
-                    var storeName = DBName;
+      describe('Callbacks', function() {
+        it('should delete a Datastore', function(done) {
+          var storeName = DBName;
 
-                    DatastoreManager.openDatastore(storeName, function(error,
-                        createdStore) {
-                        expect(error).toBe(null);
+          manager.openDatastore(storeName, function(error,
+              createdStore) {
+            expect(error).toBe(null);
 
-                        DatastoreManager.deleteDatastore(storeName,
+            manager.deleteDatastore(storeName,
                             function(error) {
-                                expect(error).toBe(null);
-                                done();
+                              expect(error).toBe(null);
+                              done();
                             });
-                    });
-                });
+          });
+        });
 
-                it('should fail delete a Datastore with missing name parameter', function(
-                    done) {
-                    try {
-                        DatastoreManager.deleteDatastore(function(error, result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+        it('should fail delete a Datastore with missing name parameter', function(
+            done) {
+          try {
+            manager.deleteDatastore(function(error, result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with null name', function(done) {
-                    try {
-                        DatastoreManager.deleteDatastore(null, function(error,
-                            result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+        it('should fail delete a Datastore with null name', function(done) {
+          try {
+            manager.deleteDatastore(null, function(error,
+                result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with empty name', function(done) {
-                    try {
-                        DatastoreManager.deleteDatastore("", function(error,
-                            result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+        it('should fail delete a Datastore with empty name', function(done) {
+          try {
+            manager.deleteDatastore('', function(error,
+                result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with name of wrong type', function(
-                    done) {
-                    try {
-                        DatastoreManager.deleteDatastore(['foo'], function(
-                            error, result) {
-                            expect(true).toBe(false);
-                        });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
-            }); // end callback tests
+        it('should fail delete a Datastore with name of wrong type', function(
+            done) {
+          try {
+            manager.deleteDatastore(['foo'], function(
+                error, result) {
+              expect(true).toBe(false);
+            });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
+      }); // End callback tests
 
-            describe('Promises', function() {
-                it('should delete a Datastore', function(done) {
-                    var storeName = DBName;
+      describe('Promises', function() {
+        it('should delete a Datastore', function(done) {
+          var storeName = DBName;
 
-                    DatastoreManager.openDatastore(storeName)
+          manager.openDatastore(storeName)
                         .then(function(createdStore) {
-                            expect(createdStore).not.toBe(null);
-                            return DatastoreManager.deleteDatastore(storeName);
+                          expect(createdStore).not.toBe(null);
+                          return manager.deleteDatastore(storeName);
                         })
                         .catch(function(error) {
-                            expect(error).toBe(null);
+                          expect(error).toBe(null);
                         })
                         .fin(done);
-                });
+        });
 
-                it('should fail delete a Datastore with missing name parameter', function(
-                    done) {
-                    try {
-                        DatastoreManager.deleteDatastore()
+        it('should fail delete a Datastore with missing name parameter', function(
+            done) {
+          try {
+            manager.deleteDatastore()
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with null name', function(done) {
-                    try {
-                        DatastoreManager.deleteDatastore(null)
+        it('should fail delete a Datastore with null name', function(done) {
+          try {
+            manager.deleteDatastore(null)
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with empty name', function(done) {
-                    try {
-                        DatastoreManager.deleteDatastore("")
+        it('should fail delete a Datastore with empty name', function(done) {
+          try {
+            manager.deleteDatastore('')
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
 
-                it('should fail delete a Datastore with name of wrong type', function(
-                    done) {
-                    try {
-                        DatastoreManager.deleteDatastore(['foo'])
+        it('should fail delete a Datastore with name of wrong type', function(
+            done) {
+          try {
+            manager.deleteDatastore(['foo'])
                             .then(function(result) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             })
                             .catch(function(error) {
-                                expect(true).toBe(false);
+                              expect(true).toBe(false);
                             });
-                        expect(true).toBe(false);
-                        done();
-                    } catch (error) {
-                        expect(error).not.toBe(null);
-                        done();
-                    }
-                });
-            }); // end promise tests
-        }); // end deleteDatastore tests
-    });
+            expect(true).toBe(false);
+            done();
+          } catch (error) {
+            expect(error).not.toBe(null);
+            done();
+          }
+        });
+      }); // End promise tests
+    }); // End deleteDatastore tests
+  });
 };
