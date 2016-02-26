@@ -30,6 +30,7 @@
     <js-module name="CRUDTests" src="CRUDTests.js"/>
     <js-module name="IndexAndQueryTests" src="IndexAndQueryTests.js"/>
     <js-module name="ReplicationTests" src="ReplicationTests.js"/>
+    <js-module name="DatastoreTests" src="DatastoreTests.js"/>
     <js-module name="tests" src="Tests.js" />
 
     <platform name="android">
