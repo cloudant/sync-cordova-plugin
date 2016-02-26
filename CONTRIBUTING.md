@@ -1,7 +1,28 @@
 # Contributing
-This document covers information for contributing to this project.
+Cloudant-sync is a cordova plug-in which wraps [Cloudant Sync - Android Datastore](https://github.com/cloudant/sync-android)
+And [CDTDatastore](https://github.com/cloudant/CDTDatastore).
 
-## Development Requirements
+## Contributor License Agreement
+
+In order for us to accept pull-requests, the contributor must first complete
+a Contributor License Agreement (CLA). This clarifies the intellectual
+property license granted with any contribution. It is for your protection as a
+Contributor as well as the protection of IBM and its customers; it does not
+change your rights to use your own Contributions for any other purpose.
+
+This is a quick process: one option is signing using Preview on a Mac,
+then sending a copy to us via email. Signing this agreement covers a few repos
+as mentioned in the appendix of the CLA.
+
+You can download the CLAs here:
+
+ - [Individual](http://cloudant.github.io/cloudant-sync-eap/cla/cla-individual.pdf)
+ - [Corporate](http://cloudant.github.io/cloudant-sync-eap/cla/cla-corporate.pdf)
+
+If you are an IBMer, please contact us directly as the contribution process is
+slightly different.
+
+## Requirements
 - [Node.js&reg;](https://nodejs.org)
 - [CouchDB](http://couchdb.apache.org/)
   * OSX - `brew install couchdb`
@@ -30,6 +51,7 @@ From the project's root folder you can run:
     - Use `npm run compile-platform -- 'ios'` or `npm run compile-platform -- 'android'`
      to just compile for a specific platform
 - `npm run lint` to check the javascript files
+
 
 ## Testing
 Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework) via [cordova-paramedic](https://github.com/apache/cordova-paramedic), but this can be handled automatically
@@ -71,3 +93,13 @@ exports.defineAutoTests = function() {
     // ...
 }
 ```
+
+## Code Style
+
+We follow the nodejs code style, with some modifications. JSCS is our tool of
+choice for enforcing code style, and the CI checks to ensure it is followed.
+
+Some other aspects of the style are to avoid errors such as using `===` instead of
+`==` for comparisons . These are enforced by jshint.
+
+Read the .jscsrc and .jshintrc files for the exact rules that are enforced.
