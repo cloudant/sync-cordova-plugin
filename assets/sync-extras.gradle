@@ -14,7 +14,7 @@
  */
 
 dependencies {
-		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android-encryption', version:'0.15.+'
+		compile group: 'com.cloudant', name: 'cloudant-sync-datastore-android-encryption', version:'1.0.0'
 }
 
 android {

@@ -2,7 +2,7 @@ package com.cloudant.sync.cordova;
 
 import com.cloudant.sync.notifications.ReplicationCompleted;
 import com.cloudant.sync.notifications.ReplicationErrored;
-import com.google.common.eventbus.Subscribe;
+import com.cloudant.sync.event.Subscribe;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
