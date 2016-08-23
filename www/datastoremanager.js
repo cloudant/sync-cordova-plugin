@@ -233,6 +233,8 @@ exports.Datastore = Datastore;
  * @description Closes the datastore and releases native resources, once closed
  * a datastore can not be reused.
  *
+ * Note that on iOS, calls to close are always considered successful.
+ *
  * @param {Datastore~closeCallback} [callback] function to call after the
  * datastore has been closed.
  *
