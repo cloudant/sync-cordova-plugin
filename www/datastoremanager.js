@@ -685,6 +685,6 @@ function save(dbName, documentRevision, callback) {
  */
 
 /**
-  * @callback Datastore~closeCallback
-  * @param {?Error} error
-  */
+ * @callback Datastore~closeCallback
+ * @param {?Error} error
+ */
