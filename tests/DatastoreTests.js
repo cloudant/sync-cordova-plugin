@@ -15,7 +15,7 @@
 
 var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManager;
 
-var dbName = 'DatastoreTests';
+var dbName = 'datastoretests';
 
 exports.defineAutoTests = function() {
 
