@@ -16,7 +16,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cloudant-sync"
-    version="0.1.0">
+    version="0.3.0">
     <name>Cloudant Sync</name>
     <description>Cloudant Sync Cordova Plugin</description>
     <keywords>cloudant, sync, cloudant-sync, cloudantSync</keywords>
@@ -35,11 +35,6 @@
     <!-- Cordova deps -->
     <dependency id="cordova-plugin-file" />
 
-    <engines>
-        <engine name="cordova-android" version=">=5.0.0" />
-        <engine name="cordova-ios" version=">=4.0.0" />
-    </engines>
-
     <!-- ios -->
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
@@ -48,8 +43,10 @@
             </feature>
         </config-file>
 
-        <framework custom="true" src="libs/ios/CDTDatastore.framework"/>
-
+        <framework src="libs/ios/CocoaLumberjack.framework" custom="true"/>
+        <framework src="libs/ios/CDTDatastore.framework" custom="true"/>
+        <framework src="libs/ios/FMDB.framework" custom="true"/>
+        <hook type="after_platform_add" src="hooks/embedFramework.sh"/>
 
         <header-file src="src/ios/CDTSyncPlugin.h" />
         <source-file src="src/ios/CDTSyncPlugin.m" />
