@@ -21,14 +21,12 @@ import android.util.Log;
 import com.cloudant.http.HttpConnectionRequestInterceptor;
 import com.cloudant.http.HttpConnectionResponseInterceptor;
 import com.cloudant.sync.datastore.Attachment;
-import com.cloudant.sync.datastore.BasicDocumentRevision;
 import com.cloudant.sync.datastore.Datastore;
 import com.cloudant.sync.datastore.DatastoreManager;
 import com.cloudant.sync.datastore.DocumentBody;
 import com.cloudant.sync.datastore.DocumentBodyFactory;
 import com.cloudant.sync.datastore.DocumentRevision;
 import com.cloudant.sync.datastore.DocumentRevisionBuilder;
-import com.cloudant.sync.datastore.MutableDocumentRevision;
 import com.cloudant.sync.datastore.UnsavedStreamAttachment;
 import com.cloudant.sync.datastore.encryption.AndroidKeyProvider;
 import com.cloudant.sync.datastore.encryption.CachingKeyProvider;
@@ -355,10 +353,11 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     DocumentRevision rev = buildDocRevision(docRev);
 
                     DocumentRevision result;
-                    if (rev instanceof MutableDocumentRevision) {
-                        result = ds.createDocumentFromRevision((MutableDocumentRevision) rev);
+
+                    if (isCreate(docRev)) {
+                        result = ds.createDocumentFromRevision(rev);
                     } else {
-                        result = ds.updateDocumentFromRevision(((BasicDocumentRevision) rev).mutableCopy());
+                        result = ds.updateDocumentFromRevision(rev);
                     }
                     JSONObject r = buildJSON(result);
                     callbackContext.success(r);
@@ -405,7 +404,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     Datastore ds = getDatastore(datastoreName);
                     DocumentRevision rev = buildDocRevision(docRev);
 
-                    DocumentRevision deletedRevision = ds.deleteDocumentFromRevision((BasicDocumentRevision) rev);
+                    DocumentRevision deletedRevision = ds.deleteDocumentFromRevision(rev);
                     callbackContext.success(buildJSON(deletedRevision));
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -755,12 +754,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
         DocumentBody body;
 
-        boolean isCreate = true;
-
-        if (docRevisionJSON.has(DOC_ID) && docRevisionJSON.has(DOC_REV)) {
-            isCreate = false;
-        }
-
         if (docRevisionJSON.has(DOC_ID)) {
             builder.setDocId((String) docRevisionJSON.get(DOC_ID));
         }
@@ -798,21 +791,8 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         body = DocumentBodyFactory.create(getMapFromJSONObject(docRevisionJSON));
 
         builder.setBody(body);
-        DocumentRevision rev;
 
-        if (isCreate) {
-            MutableDocumentRevision mutable = builder.buildMutable();
-            if (attachmentList != null) {
-                for (Attachment attachment : attachmentList) {
-                    mutable.attachments.put(attachment.name, attachment);
-                }
-            }
-            rev = mutable;
-        } else {
-            rev = builder.build();
-        }
-
-        return rev;
+        return builder.build();
     }
 
     /**
@@ -826,8 +806,8 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         result.put(DOC_ID, rev.getId());
         result.put(DOC_REV, rev.getRevision());
 
-        if (rev instanceof BasicDocumentRevision) {
-            result.put(DOC_DELETED, ((BasicDocumentRevision) rev).isDeleted());
+        if (!isCreate(result)) {
+            result.put(DOC_DELETED, rev.isDeleted());
         }
 
         Map<String, Attachment> attachmentMap = rev.getAttachments();
@@ -950,5 +930,16 @@ public class CloudantSyncPlugin extends CordovaPlugin {
             default:
                 return "Unknown";
         }
+    }
+
+    /**
+     * Determine whether the JSONObject appears to be a create rather than an update.
+     *
+     * @param docRev - The JSONObject to evaluate
+     * @return - false if the {@code docRev} contains {@link #DOC_ID} and
+     *           {@link #DOC_REV} (implying it's an update) and true otherwise.
+     */
+    private boolean isCreate(JSONObject docRev) {
+        return !(docRev.has(DOC_ID) && docRev.has(DOC_REV));
     }
 }

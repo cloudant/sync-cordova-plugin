@@ -62,7 +62,7 @@ exports.DatastoreManager = function(options, callback) {
 };
 
 /**
- * @summary Creates a DatastoreMananger oobject
+ * @summary Creates a DatastoreManager object
  * @constructor
  * @param {Object} options to use when creating the datastore.
  *
@@ -682,7 +682,7 @@ function save(dbName, documentRevision, callback) {
  * @param {Array} results - The query results.
  */
 
- /**
+/**
   * @callback Datastore~closeCallback
   * @param {?Error} error
   */
