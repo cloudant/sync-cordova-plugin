@@ -1,6 +1,6 @@
 {
   "name": "cloudant-sync",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Cloudant Sync Cordova Plugin",
   "cordova": {
     "id": "com.cloudant.sync",
@@ -27,5 +27,13 @@
   "bugs": {
     "url": "https://github.com/cloudant/sync-cordova-plugin/issues"
   },
-  "homepage": "https://github.com/cloudant/sync-cordova-plugin#readme"
+  "homepage": "https://github.com/cloudant/sync-cordova-plugin#readme",
+  "engines": {
+    "cordovaDependencies": {
+      "0.3.0": {
+        "cordova-android": ">=5.0.0",
+        "cordova-ios": ">=4.0.0"
+      }
+    }
+  }
 }

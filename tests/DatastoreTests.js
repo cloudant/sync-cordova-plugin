@@ -15,7 +15,7 @@
 
 var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManager;
 
-var dbName = 'DatastoreTests';
+var dbName = 'datastoretests';
 
 exports.defineAutoTests = function() {
 
@@ -57,16 +57,20 @@ exports.defineAutoTests = function() {
       });
 
       it('fails to close an already closed datastore', function(done) {
-        datastore.close(function(error) {
-          expect(error).toBe(null);
+        if (typeof device !== 'undefined' && 'iOS' == device.platform) {
+          // On iOS, mark this test as pending, so as to differentiate it from fail/success.
+          pending('Skipped: On iOS there is no explicit close datastore operation. Calls to datastore.close() are always deemed successful');
+        } else {
           datastore.close(function(error) {
-            expect(error).not.toBe(null);
-            done();
+            expect(error).toBe(null);
+            datastore.close(function(error) {
+              console.log('Close already closed error: ' + error);
+              expect(error).not.toBe(null);
+              done();
+            });
           });
-        });
-
+        }
       });
-
     });
 
     describe('using promises', function() {
@@ -79,23 +83,26 @@ exports.defineAutoTests = function() {
           expect(true).toBe(true);
         })
         .catch(function(error) {
-          fail('Closing datastroe should not have failed');
+          fail('Closing datastore should not have failed');
         }).fin(done);
       });
 
       it('fails to close an already closed datastore', function(done) {
-
-        datastore.close()
-          .then(function() {
-            return datastore.close();
-          }).then(function() {
-            fail('closing datastore should have failed');
-          }).catch(function(error) {
-            expect(error).not.toBe(null);
-          }).fin(done);
+        if (typeof device !== 'undefined' && 'iOS' == device.platform) {
+          // On iOS, mark this test as pending, so as to differentiate it from fail/success.
+          pending('Skipped: On iOS there is no explicit close datastore operation. Calls to datastore.close() are always deemed successful');
+        } else {
+          datastore.close()
+            .then(function() {
+              return datastore.close();
+            }).then(function() {
+              fail('closing datastore should have failed');
+            }).catch(function(error) {
+              expect(error).not.toBe(null);
+            }).fin(done);
+        }
       });
     });
   });
-
 
 };

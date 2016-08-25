@@ -103,7 +103,7 @@ ReplicatorBuilder.prototype.addRequestInterceptors = function() {
   }
 
   // Convert arguments to Array. Never call Array.prototype.slice on arguments
-  // as it prevents optimazations
+  // as it prevents optimizations
   var args = [];
   for (var i = 0; i < arguments.length; i++) {
     args.push(arguments[i]);
@@ -129,7 +129,7 @@ ReplicatorBuilder.prototype.addRequestInterceptors = function() {
 
 /**
  * @summary Adds interceptors to the list of handlers to execute for each
- * response recieved by this replication.
+ * response received by this replication.
  * @param {(...HttpInterceptor|HttpInterceptor[])} interceptors - The
  * interceptors to add. Interceptors are executed in a pipeline and modify
  * the connection context in a serial fashion.
