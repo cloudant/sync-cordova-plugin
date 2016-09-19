@@ -25,6 +25,7 @@
 
     <dependency id="cordova-plugin-test-framework"/>
     <dependency id="cloudant-sync" />
+    <dependency id="cordova-plugin-device" />
     <js-module name="DBCreateTests" src="DBCreateTests.js"/>
     <js-module name="AttachmentsTests" src="AttachmentsTests.js"/>
     <js-module name="CRUDTests" src="CRUDTests.js"/>
