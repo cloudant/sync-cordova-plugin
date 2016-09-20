@@ -47,6 +47,14 @@ exports.defineAutoTests = function() {
     var encryptedStoreName = null;
 
     var defaultTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+    
+    // This timeout value is necessary in some tests to allow them to complete
+    // successfully on iOS. There seems to be an issue in CDTDatastore that
+    // causes connections to hang occasionally until they are timed out and
+    // retried. If this issue is fixed in CDTDatastore it may be possible
+    // to remove the use of this timeout and go back to the default by
+    // not explicitly specifying a value.
+    var LONG_TIMEOUT = 300000;
 
     beforeAll(function createManager(done) {
       DatastoreManager().then(function(m) {
@@ -1532,7 +1540,8 @@ exports.defineAutoTests = function() {
                   replicator.getState(function(error,
                       result) {
                     expect(error).toBe(null);
-                    if (result === 'Complete') {
+                    expect(result).not.toBe('Error');
+                    if (result === 'Complete' || result === 'Error') {
                       stopPoll();
                       done();
                     }
@@ -1549,7 +1558,7 @@ exports.defineAutoTests = function() {
                 expect(error).toBe(null);
                 poll(replicator); // Poll on the replication status
               });
-            });
+            }, LONG_TIMEOUT);
 
             it('should poll push replication status until completion', function(done) {
               var replicator = getReplicator('push');
@@ -1562,7 +1571,8 @@ exports.defineAutoTests = function() {
                   replicator.getState(function(error,
                       result) {
                     expect(error).toBe(null);
-                    if (result === 'Complete') {
+                    expect(result).not.toBe('Error');
+                    if (result === 'Complete' || result === 'Error') {
                       stopPoll();
                       done();
                     }
@@ -1639,7 +1649,8 @@ exports.defineAutoTests = function() {
                   replicator.getState()
                                         .then(function(result) {
                                           expect(result).not.toBe(null);
-                                          if (result === 'Complete') {
+                                          expect(result).not.toBe('Error');
+                                          if (result === 'Complete' || result === 'Error') {
                                             stopPoll();
                                             done();
                                           }
@@ -1662,7 +1673,7 @@ exports.defineAutoTests = function() {
                                 .catch(function(error) {
                                   expect(error).toBe(null);
                                 });
-            });
+            }, LONG_TIMEOUT);
 
             it('should poll push replication status until completion', function(done) {
               var replicator = getReplicator('push');
@@ -1675,7 +1686,8 @@ exports.defineAutoTests = function() {
                   replicator.getState()
                                         .then(function(result) {
                                           expect(result).not.toBe(null);
-                                          if (result === 'Complete') {
+                                          expect(result).not.toBe('Error');
+                                          if (result === 'Complete' || result === 'Error') {
                                             stopPoll();
                                             done();
                                           }
@@ -1829,7 +1841,7 @@ exports.defineAutoTests = function() {
                             .catch(function(error) {
                               expect(error).toBe(null);
                             });
-          });
+          }, LONG_TIMEOUT);
 
           it('should register and fire an "error" event', function(done) {
             var datastore = getDatastore(storeDescription);
@@ -1920,7 +1932,7 @@ exports.defineAutoTests = function() {
                             .catch(function(error) {
                               expect(error).toBe(null);
                             });
-          });
+          }, LONG_TIMEOUT);
         });
 
         describe('push replication', function() {
@@ -1975,7 +1987,7 @@ exports.defineAutoTests = function() {
               console.log(e);
               done();
             }
-          });
+          }, LONG_TIMEOUT);
         });
 
         describe('interceptors', function() {
@@ -2049,7 +2061,7 @@ exports.defineAutoTests = function() {
                                   expect(error).toBe(null);
                                   done();
                                 });
-          });
+          }, LONG_TIMEOUT);
 
           it('should timeout', function(done) {
             var datastore = getDatastore(storeDescription);
@@ -2183,7 +2195,7 @@ exports.defineAutoTests = function() {
                                   expect(error).toBe(null);
                                   done();
                                 });
-          });
+          }, LONG_TIMEOUT);
 
           it('should set the replay flag', function(done) {
             var datastore = getDatastore(storeDescription);
