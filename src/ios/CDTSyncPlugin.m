@@ -166,12 +166,13 @@
 }
 
 #pragma mark - CRUD operations
-- (void)save:(CDVInvokedUrlCommand*)command
+- (void)createOrUpdateDocumentFromRevision:(CDVInvokedUrlCommand*)command
 {
     [self.commandDelegate runInBackground:^{
         CDVPluginResult* pluginResult = nil;
         NSString *name = [command argumentAtIndex:0];
         NSDictionary *docRevisionJSON = [command argumentAtIndex:1];
+        BOOL isCreate = [[command argumentAtIndex:2] boolValue];
 
         // Lookup store in cache
         CDTDatastore *cachedStore = self.datastoreMap[name];
@@ -181,8 +182,6 @@
             if(!jsonConversionError){
                 // perform save
                 CDTDocumentRevision *savedRevision = nil;
-
-                BOOL isCreate = !revision.revId;
 
                 NSError *error;
                 if(isCreate){
@@ -298,7 +297,7 @@
                 } else {
                     // Error occurred, create response
                     NSLog(@"Document delete error:%@",[error.userInfo objectForKey:NSLocalizedDescriptionKey]);
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[NSString stringWithFormat: NSLocalizedString(@"Failed to save document revision.  Error: %@", nil), error]];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[NSString stringWithFormat: NSLocalizedString(@"Failed to delete document revision.  Error: %@", nil), error]];
                 }
                 [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             }else{

@@ -22,7 +22,7 @@
 
 -(void)deleteDatastore:(CDVInvokedUrlCommand*)command;
 
--(void)save:(CDVInvokedUrlCommand*)command;
+-(void)createOrUpdateDocumentFromRevision:(CDVInvokedUrlCommand*)command;
 
 -(void)getDocument:(CDVInvokedUrlCommand*)command;
 
