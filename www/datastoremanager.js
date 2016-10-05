@@ -261,6 +261,80 @@ Datastore.prototype.close = function(callback) {
 };
 
 /**
+ * @private
+ * @summary Checks the given 'dbName' is defined and is a string.
+ * @param {type} dbName - the value to check
+ * @throws {Error} if the given 'dbName' is undefined or not a String.
+ */
+function validateDbName(dbName) {
+  if (_.isEmpty(dbName)) {
+    throw new Error('dbName must exist');
+  }
+
+  if (!_.isString(dbName)) {
+    throw new Error('dbName must be a String');
+  }
+}
+
+/**
+ * @private
+ * @summary Checks various attributes of the given 'documentRevision' to ensure
+ * it appears to be a valid document revision.
+ * @param {type} documentRevision - the 'documentRevision' to check.
+ * @throws {Error} containing details of the problem if the validity checks
+ * fail.
+ */
+function validateDocumentRevision(documentRevision) {
+  if (!documentRevision) {
+    throw new Error('documentRevision must exist');
+  }
+
+  if (!_.isObject(documentRevision) ||
+   _.isArray(documentRevision) ||
+   _.isFunction(documentRevision)) {
+    throw new Error('documentRevision must be an Object');
+  }
+
+  var docId = documentRevision._id || null;
+  var rev = documentRevision._rev || null;
+
+  if (rev && !docId) {
+    throw new Error('\'_id\' is required if \'_rev\' is specified.');
+  }
+
+  if (documentRevision._attachments) {
+    var attachments = documentRevision._attachments;
+    if (_.isEmpty(attachments)) {
+      throw new Error(
+          'documentRevision contained invalid attachments.  _attachments' +
+          ' had no body'
+      );
+    }
+
+    for (var attachmentName in attachments) {
+      var attachment = attachments[attachmentName];
+      if (_.isEmpty(attachment)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no body');
+      }
+
+      if (_.isEmpty(attachment.data)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no data');
+      }
+
+      if (_.isEmpty(attachment.contentType)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no content_type');
+      }
+    }
+  }
+}
+
+/**
  * @summary Adds a new document with body and attachments from revision.
  * @description If '_id' in the revision is null or undefined, the document's
  * '_id' will be auto-generated
@@ -275,17 +349,14 @@ Datastore.prototype.close = function(callback) {
  */
 Datastore.prototype.createDocumentFromRevision =
 function(documentRevision, callback) {
-  if (!documentRevision) {
-    throw new Error('documentRevision must exist');
-  }
+  validateDbName(this.name);
+  validateDocumentRevision(documentRevision);
 
-  if (!_.isObject(documentRevision) ||
-   _.isArray(documentRevision) ||
-   _.isFunction(documentRevision)) {
-    throw new Error('documentRevision must be an Object');
-  }
-
-  return save(this.name, documentRevision, callback);
+  return createOrUpdateDocumentFromRevision({
+      dbName:           this.name,
+      documentRevision: documentRevision,
+      callback:         callback,
+      isCreate:         true,});
 };
 
 /**
@@ -302,21 +373,19 @@ function(documentRevision, callback) {
  */
 Datastore.prototype.updateDocumentFromRevision =
     function(documentRevision, callback) {
-  if (!documentRevision) {
-    throw new Error('documentRevision must exist');
-  }
+  validateDbName(this.name);
+  validateDocumentRevision(documentRevision);
 
-  if (!_.isObject(documentRevision) ||
-   _.isArray(documentRevision) ||
-   _.isFunction(documentRevision)) {
-    throw new Error('documentRevision must be an Object');
-  }
-
+  // Additional check on documentRevision when updating.
   if (_.isEmpty(documentRevision._id) || _.isEmpty(documentRevision._rev)) {
     throw new Error('documentRevision must have \'_id\' and \'_rev\' fields');
   }
 
-  return save(this.name, documentRevision, callback);
+  return createOrUpdateDocumentFromRevision({
+      dbName:           this.name,
+      documentRevision: documentRevision,
+      callback:         callback,
+      isCreate:         false,});
 };
 
 /**
@@ -546,64 +615,22 @@ Datastore.prototype.find = function(query, callback) {
 // Internal Functions
 
 /**
- * Saves a new or existing DocumentRevision to the Datastore.
+ * Creates or updates a document in the Datastore.
  *
  * @private
- * @param {String} dbName - The name of the opened Datastore.
- * @param {String} documentRevision - The DocumentRevision to save.
+ * @param {Object} args
+ * @param {String} args.dbName - The name of the opened Datastore.
+ * @param {String} args.documentRevision - The DocumentRevision to create or
+ * update.
  * @param {Datastore~createDocumentFromRevisionCallback |
- *  Datastore~updateDocumentFromRevisionCallback} [callback] - The function to
- * call after attempting to save the document.
+ *  Datastore~updateDocumentFromRevisionCallback} [args.callback] - The function
+ * to call after attempting to create/update the document.
+ * @param {boolean} args.isCreate - if true, indicates we are creating a
+ * document and if false, indicates we are updating a document.
  * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
  * either the saved document revision or an Error.
  */
-function save(dbName, documentRevision, callback) {
-  if (_.isEmpty(dbName)) {
-    throw new Error('dbName must exist');
-  }
-
-  if (!_.isString(dbName)) {
-    throw new Error('dbName must be a String');
-  }
-
-  var docId = documentRevision._id || null;
-  var rev = documentRevision._rev || null;
-
-  var errorMessage = null;
-  if (rev && !docId) {
-    errorMessage = '\'_id\' is required if \'_rev\' is specified.';
-  }
-
-  if (documentRevision._attachments) {
-    var attachments = documentRevision._attachments;
-    if (_.isEmpty(attachments)) {
-      throw new Error(
-          'documentRevision contained invalid attachments.  _attachments' +
-          ' had no body'
-      );
-    }
-
-    for (var attachmentName in attachments) {
-      var attachment = attachments[attachmentName];
-      if (_.isEmpty(attachment)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no body');
-      }
-
-      if (_.isEmpty(attachment.data)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no data');
-      }
-
-      if (_.isEmpty(attachment.contentType)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no content_type');
-      }
-    }
-  }
+function createOrUpdateDocumentFromRevision(args) {
 
   var deferred = Q.defer();
 
@@ -615,17 +642,13 @@ function save(dbName, documentRevision, callback) {
     deferred.reject(error);
   }
 
-  if (!errorMessage) {
-    exec(successHandler,
-        errorHandler,
-        'CloudantSync',
-        'save',
-        [dbName, documentRevision]);
-  } else {
-    deferred.reject(new Error(errorMessage));
-  }
+  exec(successHandler,
+       errorHandler,
+       'CloudantSync',
+       'createOrUpdateDocumentFromRevision',
+       [args.dbName, args.documentRevision, args.isCreate]);
 
-  deferred.promise.nodeify(callback);
+  deferred.promise.nodeify(args.callback);
   return deferred.promise;
 }
 

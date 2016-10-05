@@ -68,7 +68,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String ACTION_OPEN_DATASTORE = "openDatastore";
     private static final String ACTION_CLOSE_DATASTORE = "closeDatastore";
     private static final String ACTION_DELETE_DATASTORE = "deleteDatastore";
-    private static final String ACTION_SAVE = "save";
+    private static final String ACTION_CREATE_OR_UPDATE_DOCUMENT_FROM_REVISION = "createOrUpdateDocumentFromRevision";
     private static final String ACTION_GET_DOCUMENT = "getDocument";
     private static final String ACTION_DELETE_DOCUMENT_FROM_REVISION = "deleteDocumentFromRevision";
     private static final String ACTION_ENSURE_INDEXED = "ensureIndexed";
@@ -133,11 +133,12 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
             deleteDatastore(datastoreManagerId, name, callbackContext);
 
-        } else if (ACTION_SAVE.equals(action)) {
+        } else if (ACTION_CREATE_OR_UPDATE_DOCUMENT_FROM_REVISION.equals(action)) {
             final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final JSONObject docRev = JSONObject.NULL.equals(args.get(1)) ? null : args.getJSONObject(1);
+            final boolean isCreate = JSONObject.NULL.equals(args.get(2)) ? null : args.getBoolean(2);
 
-            save(datastoreName, docRev, callbackContext);
+            createOrUpdateDocumentFromRevision(datastoreName, docRev, callbackContext, isCreate);
 
         } else if (ACTION_GET_DOCUMENT.equals(action)) {
             final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
@@ -339,12 +340,14 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     }
 
     /**
-     * Saves a document revision
+     * Creates or updates a document from a given revision
      * @param datastoreName - The name of the Datastore
      * @param docRev - The JSON document revision to save
      * @param callbackContext - The javascript callback to execute when complete or errored
+     * @param isCreate - if true, indicates we are creating a document and if false, indicates
+     *        we are updating a document.
      */
-    private void save(final String datastoreName, final JSONObject docRev, final CallbackContext callbackContext) {
+    private void createOrUpdateDocumentFromRevision(final String datastoreName, final JSONObject docRev, final CallbackContext callbackContext, final boolean isCreate) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
@@ -354,12 +357,12 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
                     DocumentRevision result;
 
-                    if (isCreate(docRev)) {
+                    if (isCreate) {
                         result = ds.createDocumentFromRevision(rev);
                     } else {
                         result = ds.updateDocumentFromRevision(rev);
                     }
-                    JSONObject r = buildJSON(result);
+                    JSONObject r = buildJSON(result, isCreate);
                     callbackContext.success(r);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -381,7 +384,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                 try {
                     Datastore ds = getDatastore(datastoreName);
                     DocumentRevision result = ds.getDocument(docId);
-                    JSONObject r = buildJSON(result);
+                    JSONObject r = buildJSON(result, false);
                     callbackContext.success(r);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -405,7 +408,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     DocumentRevision rev = buildDocRevision(docRev);
 
                     DocumentRevision deletedRevision = ds.deleteDocumentFromRevision(rev);
-                    callbackContext.success(buildJSON(deletedRevision));
+                    callbackContext.success(buildJSON(deletedRevision, false));
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
                 }
@@ -495,7 +498,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     JSONArray r = new JSONArray();
                     if (qr != null) {
                         for (DocumentRevision rev : qr) {
-                            JSONObject jsonDoc = buildJSON(rev);
+                            JSONObject jsonDoc = buildJSON(rev, false);
                             r.put(jsonDoc);
                         }
                     }
@@ -801,12 +804,12 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @throws JSONException
      * @throws IOException
      */
-    private JSONObject buildJSON(DocumentRevision rev) throws JSONException, IOException {
+    private JSONObject buildJSON(DocumentRevision rev, boolean isCreate) throws JSONException, IOException {
         JSONObject result = new JSONObject();
         result.put(DOC_ID, rev.getId());
         result.put(DOC_REV, rev.getRevision());
 
-        if (!isCreate(result)) {
+        if (!isCreate) {
             result.put(DOC_DELETED, rev.isDeleted());
         }
 
@@ -932,14 +935,4 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         }
     }
 
-    /**
-     * Determine whether the JSONObject appears to be a create rather than an update.
-     *
-     * @param docRev - The JSONObject to evaluate
-     * @return - false if the {@code docRev} contains {@link #DOC_ID} and
-     *           {@link #DOC_REV} (implying it's an update) and true otherwise.
-     */
-    private boolean isCreate(JSONObject docRev) {
-        return !(docRev.has(DOC_ID) && docRev.has(DOC_REV));
-    }
 }
