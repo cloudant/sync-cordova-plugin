@@ -35,6 +35,9 @@
     <!-- Cordova deps -->
     <dependency id="cordova-plugin-file" />
 
+    <!-- get npm dependencies -->
+    <hook type="before_plugin_install" src="hooks/getDependencies.js"/>
+
     <!-- ios -->
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
