@@ -13,8 +13,6 @@
  *
  */
 
-var _ = require('cloudant-sync.underscore');
-
 var lastTimestamp = 0;
 
 exports.defineProperty = function(object, key, options) {
