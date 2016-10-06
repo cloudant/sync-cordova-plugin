@@ -24,7 +24,7 @@
     <repo>https://github.com/cloudant/sync-cordova-plugin#:plugin</repo>
 
     <js-module src="libs/q.js" name="q" />
-    <js-module src="libs/underscore.js" name="underscore" />
+    <js-module src="node_modules/underscore/underscore.js" name="underscore" />
     <js-module src="libs/utils.js" name="utils" />
 
     <js-module src="www/datastoremanager.js" name="DatastoreManager"/>

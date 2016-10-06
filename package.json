@@ -35,5 +35,8 @@
         "cordova-ios": ">=4.0.0"
       }
     }
+  },
+  "dependencies": {
+    "underscore": "1.8.3"
   }
 }
