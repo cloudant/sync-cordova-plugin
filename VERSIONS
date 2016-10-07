@@ -1,9 +1,0 @@
-# Android libraries
-sync-android 0.13.4
-
-# iOS libraries
-CDTDatastore 0.17.1
-
-# JavaScript libraries
-underscore.js 1.8.3
-q.js 1.4.1

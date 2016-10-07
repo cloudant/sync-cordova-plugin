@@ -16,7 +16,7 @@
  */
 
 var Q = require('cloudant-sync.q');
-var _ = require('cloudant-sync.underscore');
+var _ = require('cloudant-sync.lodash_funcs');
 var utils = require('cloudant-sync.utils');
 var Datastore = require('cloudant-sync.DatastoreManager').Datastore;
 var Replicator = require('cloudant-sync.Replicator');

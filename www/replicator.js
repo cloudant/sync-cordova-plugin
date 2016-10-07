@@ -17,7 +17,7 @@
 
 var exec = require('cordova/exec');
 var Q = require('cloudant-sync.q');
-var _ = require('cloudant-sync.underscore');
+var _ = require('cloudant-sync.lodash_funcs');
 var utils = require('cloudant-sync.utils');
 var Datastore = require('cloudant-sync.DatastoreManager').Datastore;
 var HttpInterceptorContext = require('cloudant-sync.HttpInterceptorContext');

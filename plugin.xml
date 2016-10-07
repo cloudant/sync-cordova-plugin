@@ -23,8 +23,12 @@
     <license>Apache 2.0 License</license>
     <repo>https://github.com/cloudant/sync-cordova-plugin#:plugin</repo>
 
-    <js-module src="libs/q.js" name="q" />
-    <js-module src="libs/underscore.js" name="underscore" />
+    <js-module src="node_modules/q/q.js" name="q" />
+    <js-module src="node_modules/lodash.isempty/index.js" name="isempty" />
+    <js-module src="node_modules/lodash.isfunction/index.js" name="isfunction" />
+    <js-module src="node_modules/lodash.isobject/index.js" name="isobject" />
+    <js-module src="node_modules/lodash.isstring/index.js" name="isstring" />
+    <js-module src="libs/lodash_funcs.js" name="lodash_funcs" />
     <js-module src="libs/utils.js" name="utils" />
 
     <js-module src="www/datastoremanager.js" name="DatastoreManager"/>
@@ -34,6 +38,9 @@
 
     <!-- Cordova deps -->
     <dependency id="cordova-plugin-file" />
+
+    <!-- get npm dependencies -->
+    <hook type="before_plugin_install" src="hooks/getDependencies.js"/>
 
     <!-- ios -->
     <platform name="ios">
