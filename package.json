@@ -42,5 +42,16 @@
     "lodash.isobject": "~3.0.2",
     "lodash.isstring": "~4.0.1",
     "q": "~1.4.1"
+  },
+  "devDependencies": {
+    "cordova-paramedic": "^0.5.0"
+  },
+  "scripts": {
+    "compile": "npm run-script compile-ios && npm run-script compile-android",
+    "compile-android": "cordova-paramedic --platform 'android' --plugin . --justbuild --verbose",
+    "compile-ios": "cordova-paramedic --platform 'ios' --plugin . --justbuild --verbose",
+    "test-ios": "cordova-paramedic --platform 'ios' --plugin . --verbose",
+    "test-android": "cordova-paramedic --platform 'android' --plugin . --verbose",
+    "test": "npm run-script test-ios && npm run-script test-android"
   }
 }

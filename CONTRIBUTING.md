@@ -22,21 +22,31 @@ This document covers information for contributing to this project.
 - www - Plugin source code
 
 ## Setup
- <!-- Tell it how to run a node script here.-->
+From the project's root folder you can run:
+- `npm install` to install the dependencies & devDependencies (required to compile
+   or run tests)
+- `npm run-script compile` to build the native code (e.g. to check that new
+  functions compile correctly)
+    - Use `compile-ios` or `compile-android` to just compile for a specific platform
 
 ## Testing
-Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework).  
-You can run tests by using [cordova-paramedic](https://github.com/purplecabbage/cordova-paramedic)
-however, in order to specify the platform version you will need to use [this fork](https://github.com/rhyshort/cordova-paramedic)
-which can be installed via npm.
-```sh
-$  npm install -g "git+ssh://git@github.com:rhyshort/cordova-paramedic.git"
-```
+Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework) via [cordova-paramedic](https://github.com/purplecabbage/cordova-paramedic), but this can be handled automatically
+by `npm` scripts.
+
+Before running the tests:
+- Run `npm install` to get the devDependencies (i.e. `cordova-paramedic`)
+
 Before running any tests your local CouchDB will need to have a copy of animalDB, this can be replicated
 to your local CouchDB running on 5984 by running the setup.rb script in the root of the repo.
 
-Example: Running the tests on Android using 5.0.x engine. Note: this command must
-be run in the root of the checkout.
+Run the tests with
+- `npm test` to run the tests (for both platforms)
+    - Use `npm run-script test-ios` or `npm run-script test-android` to test
+     a specific platform
+
+If you want to run with a specific platform (the defaults are `ios` and `android`)
+you can run the cordova-paramedic command directly. Example: Running the tests on
+ Android using 5.0.x engine. Note: this command must be run in the root of the checkout.
 ```sh
 $  cordova-paramedic --platform 'android@5.0' --plugin . --verbose
 ```
