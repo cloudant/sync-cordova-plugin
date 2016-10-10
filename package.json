@@ -23,7 +23,7 @@
     "cordova-android"
   ],
   "author": "IBM Cloudant",
-  "license": "Apache 2.0 License",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/cloudant/sync-cordova-plugin/issues"
   },
