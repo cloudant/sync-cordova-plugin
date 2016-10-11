@@ -30,7 +30,7 @@ From the project's root folder you can run:
     - Use `compile-ios` or `compile-android` to just compile for a specific platform
 
 ## Testing
-Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework) via [cordova-paramedic](https://github.com/purplecabbage/cordova-paramedic), but this can be handled automatically
+Our tests run using [cordova-plugin-test-framework](https://github.com/apache/cordova-plugin-test-framework) via [cordova-paramedic](https://github.com/apache/cordova-paramedic), but this can be handled automatically
 by `npm` scripts.
 
 Before running the tests:
