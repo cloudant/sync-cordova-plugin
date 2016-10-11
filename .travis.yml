@@ -26,7 +26,6 @@ android:
     - sys-img-armeabi-v7a-android-21
 
 before_script:
-    - npm install -g "git+ssh://git@github.com:rhyshort/cordova-paramedic.git"
     - npm install -g cordova
     - npm install -g jscs
     - ./setup.rb
@@ -36,6 +35,7 @@ before_script:
     - android-wait-for-emulator
 
 script:
-    - cordova-paramedic --platform 'android@5.0' --plugin . --verbose --timeout 3000000
+    - npm install
+    - npm run-script test-android
     # for now only check javascript production source files follow guidelines.
     - jscs ./www/*.js
