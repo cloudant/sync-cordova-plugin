@@ -44,14 +44,16 @@
     "q": "~1.4.1"
   },
   "devDependencies": {
-    "cordova-paramedic": "^0.5.0"
+    "cordova": "latest",
+    "cordova-paramedic": "latest",
+    "jscs": "latest"
   },
   "scripts": {
-    "compile": "npm run-script compile-ios && npm run-script compile-android",
-    "compile-android": "cordova-paramedic --platform 'android' --plugin . --justbuild --verbose",
-    "compile-ios": "cordova-paramedic --platform 'ios' --plugin . --justbuild --verbose",
-    "test-ios": "cordova-paramedic --platform 'ios' --plugin . --verbose --timeout 1200000",
-    "test-android": "cordova-paramedic --platform 'android' --plugin . --verbose",
-    "test": "npm run-script test-ios && npm run-script test-android"
+    "cpm": "cordova-paramedic --plugin . --verbose --timeout 1200000 ",
+    "compile": "npm run compile-platform -- 'ios' && npm run compile-platform -- 'android'",
+    "compile-platform": "npm run cpm -- --justbuild --platform ",
+    "test-platform": "npm run cpm -- --platform ",
+    "test": "npm run test-platform -- 'ios' && npm run test-platform -- 'android'",
+    "lint": "jscs ./www/*.js"
   }
 }
