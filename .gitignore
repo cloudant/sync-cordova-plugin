@@ -6,3 +6,6 @@ dev/devapp
 
 # SQLCipher Android zip and libs
 dev/patch/sqlcipher-for-android*
+
+# Node dependencies
+node_modules
