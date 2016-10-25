@@ -33,10 +33,11 @@ exports.generateToken = function () {
     return checkTimestamp((new Date()).getTime());
 };
 
-// This checks if last timestamp used is the same as the one passed in.
-// This function is used to ensure that 2 tokens are unique
-function checkTimestamp(timestamp) {
-    if (timestamp === lastTimestamp) {
+// This checks if the given timestamp has been used already. If it has, it
+// returns a timestamp one more than the last one used, otherwise it returns the
+// given timestamp. This function is used to ensure that tokens are unique.
+ function checkTimestamp(timestamp) {
+    if (timestamp <= lastTimestamp) {
         lastTimestamp++;
     } else {
         lastTimestamp = timestamp;

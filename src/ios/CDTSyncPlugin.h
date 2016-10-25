@@ -48,4 +48,12 @@
 
 -(void)createDatastoreManager:(CDVInvokedUrlCommand*)command;
 
+-(void)getConflictedDocumentIds:(CDVInvokedUrlCommand*)command;
+
+-(void)resolveConflictsForDocument:(CDVInvokedUrlCommand*)command;
+
+-(void)returnResolvedDocument:(CDVInvokedUrlCommand*)command;
+
++(CDTDocumentRevision*) convertJSONToDocument: (NSDictionary*)json error: (NSError**) error;
++(NSDictionary*) convertDocumentToJSON: (CDTDocumentRevision*)document error: (NSError**) error;
 @end

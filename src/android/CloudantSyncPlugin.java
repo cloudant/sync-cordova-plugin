@@ -21,6 +21,7 @@ import android.util.Log;
 import com.cloudant.http.HttpConnectionRequestInterceptor;
 import com.cloudant.http.HttpConnectionResponseInterceptor;
 import com.cloudant.sync.datastore.Attachment;
+import com.cloudant.sync.datastore.ConflictResolver;
 import com.cloudant.sync.datastore.Datastore;
 import com.cloudant.sync.datastore.DatastoreManager;
 import com.cloudant.sync.datastore.DocumentBody;
@@ -80,6 +81,9 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String ACTION_STOP_REPLICATION = "stopReplication";
     private static final String ACTION_GET_REPLICATION_STATUS = "getReplicationStatus";
     private static final String ACTION_UNLOCK_INTERCEPTOR = "unlockInterceptor";
+    private static final String ACTION_GET_CONFLICTED_DOCUMENT_IDS = "getConflictedDocumentIds";
+    private static final String ACTION_RESOLVE_CONFLICTS_FOR_DOCUMENT = "resolveConflictsForDocument";
+    private static final String ACTION_RETURN_RESOLVED_DOCUMENT = "returnResolvedDocument";
 
     private static final String DATASTORE_NAME = "name";
 
@@ -107,6 +111,79 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static Map<Integer, SyncPluginInterceptor> interceptors = Collections.synchronizedMap(new HashMap<Integer, SyncPluginInterceptor>());
     private static Map<String, Map<String, KeyProvider>> keyProviders = Collections.synchronizedMap(new HashMap<String, Map<String, KeyProvider>>());
     private static Map<Integer, DatastoreManager> datastoreManagers = Collections.synchronizedMap(new HashMap<Integer,DatastoreManager>());
+    private static Map<String, ConflictResolverWrapper> resolverMap = Collections.synchronizedMap(new HashMap<String, ConflictResolverWrapper>());
+
+    private class ConflictResolverWrapper implements ConflictResolver {
+
+       private CallbackContext callbackContext;
+       private DocumentRevision documentRevision;
+       private boolean conflictResolutionComplete;
+
+       ConflictResolverWrapper(CallbackContext callbackContext) {
+          this.callbackContext = callbackContext;
+       }
+
+       void setRevision(DocumentRevision revision) {
+          synchronized(this) {
+             documentRevision = revision;
+             conflictResolutionComplete = true;
+             this.notifyAll();
+          }
+       }
+
+       public DocumentRevision resolve (String docId, List<DocumentRevision> conflicts) {
+          try {
+             JSONArray jsonConflicts = new JSONArray();
+             for (DocumentRevision docRev : conflicts) {
+                jsonConflicts.put(buildJSON(docRev, false));
+             }
+
+             JSONObject jsonObject = new JSONObject();
+             jsonObject.put("docId", docId);
+             jsonObject.put("conflicts", jsonConflicts);
+             jsonObject.put("resolverId", callbackContext.getCallbackId());
+
+             // Send the conflicts back to the javascript so that the conflicts can
+             // be resolved in the javascript callback. Keep the callback alive
+             // so we can also notify the caller of the end of conflict resolution.
+             PluginResult r = new PluginResult(PluginResult.Status.OK, jsonObject);
+             r.setKeepCallback(true);
+             callbackContext.sendPluginResult(r);
+
+             // Wait for the javascript to call us back with the result of the
+             // conflict resolution.
+             try {
+                synchronized(this) {
+                   while(!this.conflictResolutionComplete) {
+                      this.wait();
+                   }
+                }
+             } catch (InterruptedException e) {
+                Log.e(TAG, "Interrupted while waiting for callback during conflict resolution for: " + docId, e);
+                return null;
+             }
+
+             // Update the document with the revised info we got back from the javascript.
+             if (this.documentRevision != null) {
+                for (DocumentRevision docRev : conflicts) {
+                   if (docRev.getRevision().equals(this.documentRevision.getRevision())) {
+                      docRev.setBody(this.documentRevision.getBody());
+                      docRev.setAttachments(this.documentRevision.getAttachments());
+                      return docRev;
+                   }
+                }
+                Log.e(TAG, "Unable to find revision matching " + this.documentRevision.getRevision() +
+                      " in conflicts for: " + docId);
+             }
+             return this.documentRevision;
+          } catch (JSONException e) {
+             Log.e(TAG, "JSONException occurred while attempting to resolve conflicts for: " + docId, e);
+          } catch (IOException e) {
+             Log.e(TAG, "IOException occurred while attempting to resolve conflicts for: " + docId, e);
+          }
+          return null;
+       }
+    }
 
     /**
      * Executes the request and returns PluginResult.
@@ -213,6 +290,20 @@ public class CloudantSyncPlugin extends CordovaPlugin {
             final String uuid = JSONObject.NULL.equals(args.get(4)) ? null : args.getString(4);
 
             unlockInterceptor(token, type, httpContext, timeout, uuid, callbackContext);
+        } else if (ACTION_GET_CONFLICTED_DOCUMENT_IDS.equals(action)) {
+            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+
+            getConflictedDocumentIds(datastoreName, callbackContext);
+        } else if (ACTION_RESOLVE_CONFLICTS_FOR_DOCUMENT.equals(action)) {
+            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentId = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
+
+            resolveConflictsForDocument(datastoreName, documentId, callbackContext);
+        } else if (ACTION_RETURN_RESOLVED_DOCUMENT.equals(action)) {
+            final JSONObject docRev = JSONObject.NULL.equals(args.get(0)) ? null : args.getJSONObject(0);
+            final String resolverId = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
+
+            returnResolvedDocument(docRev, resolverId, callbackContext);
         } else {
             return false;
         }
@@ -675,6 +766,74 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     interceptor.updateContext(uuid, httpContext);
 
                     callbackContext.success();
+                }
+            }
+        });
+    }
+
+    /**
+     * Gets the IDs of documents with conflicts
+     * @param datastoreName - The name of the Datastore
+     * @param callbackContext - The javascript callback to execute when complete or errored
+     */
+    private void getConflictedDocumentIds(final String datastoreName, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Datastore ds = getDatastore(datastoreName);
+
+                    Iterator<String> conflicts = ds.getConflictedDocumentIds();
+
+                    JSONArray r = new JSONArray();
+                    while (conflicts.hasNext()) {
+                       r.put(conflicts.next());
+                    }
+                    callbackContext.success(r);
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void resolveConflictsForDocument(final String datastoreName, final String documentId, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Datastore ds = getDatastore(datastoreName);
+
+                    ConflictResolverWrapper conflictResolver = new ConflictResolverWrapper(callbackContext);
+
+                    // Store the conflictResolver in a map indexed by a unique ID that can be passed around
+                    // to retrieve the conflictResolver from other callbacks. The callbackId is unique
+                    // to each invocation of this method so we'll use that.
+                    resolverMap.put(callbackContext.getCallbackId(), conflictResolver);
+                    ds.resolveConflictsForDocument(documentId, conflictResolver);
+                    PluginResult r = new PluginResult(PluginResult.Status.OK);
+                    callbackContext.sendPluginResult(r);
+
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            }
+        });
+    }
+
+    private void returnResolvedDocument(final JSONObject docRev, final String resolverId, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ConflictResolverWrapper conflictResolver = resolverMap.remove(resolverId);
+                    DocumentRevision revision = docRev == null ? null : buildDocRevision(docRev);
+                    conflictResolver.setRevision(revision);
+
+                    PluginResult r = new PluginResult(PluginResult.Status.OK);
+                    callbackContext.sendPluginResult(r);
+                } catch (Exception e) {
+                    callbackContext.error(e.getMessage());
                 }
             }
         });

@@ -92,7 +92,7 @@ exports.defineAutoTests = function() {
         it('.createDocumentFromRevision exists', function() {
           var datastore = getDatastore(datastoreDescription);
           expect(datastore).not.toBe(null);
-          expect(datastore.updateDocumentFromRevision).toBeDefined();
+          expect(datastore.createDocumentFromRevision).toBeDefined();
         });
 
         it('.updateDocumentFromRevision exists', function() {
@@ -135,7 +135,7 @@ exports.defineAutoTests = function() {
               expect(docRevision.firstName).toBe(employee.firstName);
               expect(docRevision.lastName).toBe(employee.lastName);
               done();
-            }); //End-datastore-updateDocumentFromRevision
+            }); //End-datastore-createDocumentFromRevision
           });
 
           it('updates a document revision', function(done) {
@@ -165,7 +165,7 @@ exports.defineAutoTests = function() {
                     .toBe(newFirstName);
                 done();
               }); //End-update
-            }); //End-datastore-updateDocumentFromRevision
+            }); //End-datastore-createDocumentFromRevision
           });
 
           it('finds a document revision by docId', function(done) {

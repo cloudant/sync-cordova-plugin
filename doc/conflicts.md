@@ -1,7 +1,5 @@
 # Handling conflicts
 
-_This functionality is yet to be implemented._
-
 An obvious repercussion of being able to replicate documents about the place
 is that sometimes you might edit them in more than one place at the same time.
 When the databases containing these concurrent edits are replicated, there needs
@@ -108,7 +106,6 @@ a method which returns all the documents in a conflicted state, along with
 a helper method to streamline the process of resolving conflicts.
 
 ### Finding conflicted documents
-_This function is not yet implemented._
 
 There's a function on the `Datastore` prototype:
 
@@ -117,50 +114,38 @@ datastore.getConflictedDocumentIds();
 ```
 
 ### Resolving the conflicts
-_This function is not yet implemented._
-
 Once you've found the list of documents, you need to resolve them. This is
-done one-by-one, passing a class able to resolve conflicts and a document
-ID to the `resolveConflictsForDocument(String, ConflictResolver)` function
-of the `Datastore` prototype.
+done one-by-one, passing a document ID and a function able to resolve conflicts
+to the `resolveConflictsForDocument(String, Datastore~resolveConflictsCallback)`
+function of the `Datastore` prototype.
 
-<!-- TODO Define API for resolving conflicts
-The `ConflictResolver` interface has one method:
+The `Datastore~resolveConflictsCallback` function has two parameters, the
+documentId and an array of conflicting document revisions and should return
+the document revision to be used to resolve the conflicts. All remaining
+document revisions will automatically be marked as deleted. A rather simplistic
+implementation would be:
 
 ```js
-interface ConflictResolver {
-    DocumentRevision resolve(String docId, List<DocumentRevision> conflicts);
-}
-```
-
-This method is passed the docId and the list of active revisions, including
-the current winning revision. A rather simplistic implementation would be:
-
-```java
-class PickFirstResolver implements ConflictResolver {
-    DocumentRevision resolve(String docId, List<DocumentRevision> conflicts) {
-        return conflicts.get(0);
-    }
+function pickFirst(documentId, documentRevisions) {
+    return documentRevisions[0];
 }
 ```
 
 Clearly, in the general case this will discard the user's data(!),
 but it'll do for this example.
 
-It is also possible to return a `MutableDocumentRevision` from
-`resolve`, perhaps by merging data from the conflicts:
+It is also possible to return an updated document from the
+`Datastore~resolveConflictsCallback`, perhaps by merging data from the conflicts:
 
-```java
-class MergeResolver implements ConflictResolver {
-    DocumentRevision resolve(String docId, List<DocumentRevision> conflicts) {
-        MutableDocumentRevision rev = conflicts.get(0).mutableCopy();
-        rev.body = /* ...update body, perhaps with data from the other conflicts */
-        rev.attachments = /* ...you can also create/update/delete attachments */
-        return rev;
-    }
+```js
+
+function mergeResolver(documentId, documentRevisions) {
+   var docRev = documentRevisions[0];
+   docRev.my_new_field = /* ...update body, perhaps with data from the other conflicts */
+   docRev._attachments = /* ...you can also create/update/delete attachments */
+   return docRev;
 }
 ```
--->
 
 Conceptually, the `resolveConflictsForDocument` method does the following:
 
@@ -203,14 +188,19 @@ the two databases into a consistent state.
 You could imagine an application running the following method
 via a timer to periodically fix up any conflicts:
 
-<!-- ```java
-public void resolveConflicts(Datastore datastore) {
-    ConflictResolver pickFirst = new PickFirstResolver();
-    for (String docId : datastore.getConflictedDocumentIds()) {
-        datastore.resolveConflictsForDocument(docId, pickFirst);
-    }
-}
-``` -->
+```js
+function resolveConflicts(datastore) {
+  function pickFirst(documentId, documentRevisions) {
+    return documentRevisions[0];
+  }
+
+  datastore.getConflictedDocumentIds()
+        .then(function (docIds) {
+          for (var i = 0; i < docIds.length; ++i) {
+            datastore.resolveConflictsForDocument(docIds[i], pickFirst);
+          }
+        });
+}```
 
 How often this should run depends on your application, but you'd probably
 want to consider:
