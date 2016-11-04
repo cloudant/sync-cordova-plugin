@@ -17,7 +17,7 @@ var DBName = 'replicationdb';
 
 try {
   var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManager;
-  var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
+  var Replicator = require('cloudant-sync.Replicator');
 } catch (e) {
   console.log('error: ' + e);
 }
@@ -47,7 +47,7 @@ exports.defineAutoTests = function() {
     var encryptedStoreName = null;
 
     var defaultTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
-    
+
     // This timeout value is necessary in some tests to allow them to complete
     // successfully on iOS. There seems to be an issue in CDTDatastore that
     // causes connections to hang occasionally until they are timed out and
@@ -58,78 +58,54 @@ exports.defineAutoTests = function() {
 
     beforeAll(function createManager(done) {
       DatastoreManager().then(function(m) {
-        manager = m;
-      })
-      .fin(done);
+          manager = m;
+        })
+        .fin(done);
     });
 
     afterEach(function deleteDatastores(done) {
       jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultTimeout;
       manager.deleteDatastore(DBName)
-            .then(function() {
-              return manager.deleteDatastore(DBName);
-            }).fin(done);
+        .then(function() {
+          return manager.deleteDatastore(DBName);
+        }).fin(done);
     });
 
 
-    function getDatastore(storeDescription) {
+    function getDatastore() {
       return localStore;
     }
 
     beforeEach(function(done) {
       jasmine.DEFAULT_TIMEOUT_INTERVAL = defaultTimeout;
       manager.openDatastore(DBName)
-                .then(function(newLocalStore) {
-                  localStore = newLocalStore;
-                })
-                .catch(function(error) {
-                  console.error(error);
-                })
-                .fin(done);
+        .then(function(newLocalStore) {
+          localStore = newLocalStore;
+        })
+        .catch(function(error) {
+          console.error(error);
+        })
+        .fin(done);
     });
 
     function testReplication(storeDescription) {
 
-      describe('ReplicatorBuilder (' + storeDescription + ')', function() {
-        it('should return a new ReplicatorBuilder', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder).not.toBe(null);
-        });
-
-        it('should contain method push', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder.push).toBeDefined();
-        });
-
-        it('should contain method pull', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder.pull).toBeDefined();
-        });
-
-        it('should contain method to', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder.to).toBeDefined();
-        });
-
-        it('should contain method from', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder.from).toBeDefined();
-        });
-
-        it('should contain method build', function() {
-          var builder = new ReplicatorBuilder();
-          expect(builder.build).toBeDefined();
-        });
+      describe('Replicator creation (' + storeDescription + ')', function() {
 
         describe('Callbacks', function() {
           it('should create a pull replicator', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
-              builder.pull().from(uri).to(datastore).build(function(error, replicator) {
+              var options = {
+                source: uri,
+                target: datastore
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options, function(error, replicator) {
                 expect(error).toBe(null);
                 expect(replicator.token).not.toBe(null);
                 replicator.token = badtoken; // Assert readonly
@@ -149,99 +125,58 @@ exports.defineAutoTests = function() {
                 done();
               });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Exception occurred: ' + e);
               done();
             }
           });
 
           it('should create a pull replicator with a request and response interceptor', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
               var interceptor = function(context) {
                 context.done();
               };
 
-              builder.pull().from(uri).to(datastore)
-                  .addRequestInterceptors(interceptor)
-                  .addResponseInterceptors(interceptor)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
-
-                                  expect(replicator.type).toBe('pull');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
-
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
-
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
-            } catch (e) {
-              expect(e).toBe(null);
-              done();
-            }
-          });
-
-          it('should create a pull replicator with a comma separated list of request and response interceptors', function(done) {
-            try {
-              var datastore = getDatastore(storeDescription);
-              expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
-
-              var interceptor1 = function(context) {
-                context.done();
+              var options = {
+                source: uri,
+                target: datastore,
+                requestInterceptors: [interceptor],
+                responseInterceptors: [interceptor]
               };
 
-              var interceptor2 = function(context) {
-                context.done();
-              };
+              expect(Replicator.create).not.toBe(null);
 
-              builder.pull().from(uri).to(datastore)
-                  .addRequestInterceptors(interceptor1, interceptor2)
-                  .addResponseInterceptors(interceptor1, interceptor2)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.type).toBe('pull');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+                expect(replicator.type).toBe('pull');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
 
           it('should create a pull replicator with an array of request and response interceptors', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
               var interceptor1 = function(context) {
                 context.done();
@@ -251,44 +186,92 @@ exports.defineAutoTests = function() {
                 context.done();
               };
 
-              var interceptors = [interceptor1, interceptor2];
+              var options = {
+                source: uri,
+                target: datastore,
+                requestInterceptors: [interceptor1, interceptor2],
+                responseInterceptors: [interceptor1, interceptor2]
+              };
 
-              builder.pull().from(uri).to(datastore)
-                  .addRequestInterceptors(interceptors)
-                  .addResponseInterceptors(interceptors)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              expect(Replicator.create).not.toBe(null);
 
-                                  expect(replicator.type).toBe('pull');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+                expect(replicator.type).toBe('pull');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
+
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
+              done();
+            }
+          });
+
+          it('should create a pull replicator with an empty request and response interceptor array', function(done) {
+            try {
+              var datastore = getDatastore(storeDescription);
+              expect(datastore).not.toBe(null);
+
+              var options = {
+                source: uri,
+                target: datastore,
+                requestInterceptors: [],
+                responseInterceptors: []
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
+
+                expect(replicator.type).toBe('pull');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
+
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
+
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
+            } catch (e) {
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
 
           it('should create a push replicator', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
-              builder.push().from(datastore).to(uri).build(function(error, replicator) {
+              var options = {
+                source: datastore,
+                target: uri
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options, function(error, replicator) {
                 expect(error).toBe(null);
                 expect(replicator.token).not.toBe(null);
                 replicator.token = badtoken; // Assert readonly
@@ -308,99 +291,58 @@ exports.defineAutoTests = function() {
                 done();
               });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
 
           it('should create a push replicator with a request and response interceptor', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
               var interceptor = function(context) {
                 context.done();
               };
 
-              builder.push().from(datastore).to(uri)
-                  .addRequestInterceptors(interceptor)
-                  .addResponseInterceptors(interceptor)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
-
-                                  expect(replicator.type).toBe('push');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
-
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
-
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
-            } catch (e) {
-              expect(e).toBe(null);
-              done();
-            }
-          });
-
-          it('should create a push replicator with a comma separated list of request and response interceptors', function(done) {
-            try {
-              var datastore = getDatastore(storeDescription);
-              expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
-
-              var interceptor1 = function(context) {
-                context.done();
+              var options = {
+                source: datastore,
+                target: uri,
+                requestInterceptors: [interceptor],
+                responseInterceptors: [interceptor]
               };
 
-              var interceptor2 = function(context) {
-                context.done();
-              };
+              expect(Replicator.create).not.toBe(null);
 
-              builder.push().from(datastore).to(uri)
-                  .addRequestInterceptors(interceptor1, interceptor2)
-                  .addResponseInterceptors(interceptor1, interceptor2)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.type).toBe('push');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+                expect(replicator.type).toBe('push');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
 
           it('should create a push replicator with an array of request and response interceptors', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
               var interceptor1 = function(context) {
                 context.done();
@@ -410,32 +352,75 @@ exports.defineAutoTests = function() {
                 context.done();
               };
 
-              var interceptors = [interceptor1, interceptor2];
+              var options = {
+                source: datastore,
+                target: uri,
+                requestInterceptors: [interceptor1, interceptor2],
+                responseInterceptors: [interceptor1, interceptor2]
+              };
 
-              builder.push().from(datastore).to(uri)
-                  .addRequestInterceptors(interceptors)
-                  .addResponseInterceptors(interceptors)
-                                .build(function(error, replicator) {
-                                  expect(error).toBe(null);
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              expect(Replicator.create).not.toBe(null);
 
-                                  expect(replicator.type).toBe('push');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+                expect(replicator.type).toBe('push');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                  done();
-                                });
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
+
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
+              done();
+            }
+          });
+
+          it('should create a push replicator with an empty request and response interceptor array', function(done) {
+            try {
+              var datastore = getDatastore(storeDescription);
+              expect(datastore).not.toBe(null);
+
+              var options = {
+                source: datastore,
+                target: uri,
+                requestInterceptors: [],
+                responseInterceptors: []
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options, function(error, replicator) {
+                expect(error).toBe(null);
+                expect(replicator.token).not.toBe(null);
+                replicator.token = badtoken; // Assert readonly
+                expect(replicator.token).not.toBe(badtoken);
+
+                expect(replicator.type).toBe('push');
+                replicator.type = badtype; // Assert readonly
+                expect(replicator.type).not.toBe(badtype);
+
+                expect(replicator.datastore).toBe(datastore);
+                replicator.datastore = baddatastore; // Assert readonly
+                expect(replicator.datastore).not.toBe(baddatastore);
+
+                expect(replicator.uri).toBe(uri);
+                replicator.uri = baduri; // Assert readonly
+                expect(replicator.uri).not.toBe(baduri);
+                done();
+              });
+            } catch (e) {
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
@@ -458,66 +443,101 @@ exports.defineAutoTests = function() {
               }
             }
 
-            new ReplicatorBuilder().pull().to(datastore).from(uri).build(callback);
-            new ReplicatorBuilder().push().from(datastore).to(uri).build(callback);
+            var pushOptions = {
+              source: datastore,
+              target: uri
+            };
+
+            var pullOptions = {
+              source: uri,
+              target: datastore
+            };
+
+            Replicator.create(pullOptions, callback);
+            Replicator.create(pushOptions, callback);
           });
 
           // Negative tests
           it('throws error if push source is null', function(done) {
-            var datastore = getDatastore(storeDescription);
+            var datastore = getDatastore();
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: null,
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(null).to(uri).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error, replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator creation did not error with null source');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push target is null', function(done) {
-            var datastore = getDatastore(storeDescription);
+            var datastore = getDatastore();
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).to(null).build(function(
-                  error, replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error, replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator creation did not error with null target');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull source is null', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: null,
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(null).to(datastore).build(function(
-                  error, replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(
+                error, replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator creation did not error with null source');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is null', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+               source: uri,
+              target: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).to(null).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator creation did not error with null target');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -528,27 +548,40 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: [],
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from([]).to(datastore).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator source is not a String');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is not a Datastore', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri,
+              target: []
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).to([]).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator target is not a Datastore');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -559,27 +592,40 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: [],
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from([]).to(uri).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator source is not a Datastore');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push target is not a String', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: []
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).to([]).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator target is not a String');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -590,70 +636,78 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator target is not set');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).build(function(error, replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error, replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator target is not set');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push source is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().to(uri).build(function(error, replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error, replicator) {
               });
-              expect(true).toBe(false);
+              fail('Push replicator source is not set');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
-          it('throws error if pull target is not set', function(done) {
+
+          it('throws error if pull source is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
-            try {
-              new ReplicatorBuilder().pull().to(datastore).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
-              });
-              expect(true).toBe(false);
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
-          it('throws error if replication type is not set', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
+            var options = {
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
 
             try {
-              new ReplicatorBuilder().from(datastore).to(uri).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Pull replicator source is not set');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -664,12 +718,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: uri,
+              requestInterceptors: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(null).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Request interceptor is null');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -680,44 +741,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
-            try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(null).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
-              });
-              expect(true).toBe(false);
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
+            var options = {
+              source: datastore,
+              target: uri,
+              responseInterceptors: null
+            };
 
-          it('throws error if request interceptor is empty', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
+            expect(Replicator.create).not.toBe(null);
 
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors().build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
-
-          it('throws error if response interceptor is empty', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
-
-            try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors().build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
-              });
-              expect(true).toBe(false);
+              fail('Response interceptor is null');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -728,12 +764,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: uri,
+              requestInterceptors: 'foo'
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors('foo').build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Request interceptor is not a function or an array');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -744,12 +787,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: uri,
+              responseInterceptors: 'foo'
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors('foo').build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Response interceptor is not a function or an array');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -760,12 +810,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: uri,
+              requestInterceptors: ['foo']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(['foo']).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Request interceptor in an array is not a function');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -776,12 +833,19 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: uri,
+              responseInterceptors: ['foo']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(['foo']).build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Response interceptor in an array is not a function');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -792,14 +856,23 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var requestFunction = function(context) {
+              context.done();
+            };
+
+            var options = {
+              source: datastore,
+              target: uri,
+              requestInterceptors: [requestFunction, 'notaninterceptor']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(function(context) {
-                context.done();
-              }, 'notaninterceptor').build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Request interceptor following a valid interceptor is not a function');            
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -810,87 +883,187 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var responseFunction = function(context) {
+              context.done();
+            };
+
+            var options = {
+              source: datastore,
+              target: uri,
+              responseInterceptors: [responseFunction, 'notaninterceptor']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(function(context) {
-                context.done();
-              }, 'notaninterceptor').build(function(error,
-                  replicator) {
-                expect(true).toBe(false);
+              Replicator.create(options, function(error,
+                replicator) {
               });
-              expect(true).toBe(false);
+              fail('Request interceptor following a valid interceptor is not a function');            
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
-
         });
+
         describe('Promises', function() {
           it('should create a pull replicator', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
-              builder.pull().from(uri).to(datastore).build()
-                                .then(function(replicator) {
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              var options = {
+                source: uri,
+                target: datastore
+              };
 
-                                  expect(replicator.type).toBe('pull');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+              expect(Replicator.create).not.toBe(null);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+              Replicator.create(options).then(function(replicator) {
+                  expect(replicator.token).not.toBe(null);
+                  replicator.token = badtoken; // Assert readonly
+                  expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                  expect(replicator.type).toBe('pull');
+                  replicator.type = badtype; // Assert readonly
+                  expect(replicator.type).not.toBe(badtype);
+
+                  expect(replicator.datastore).toBe(datastore);
+                  replicator.datastore = baddatastore; // Assert readonly
+                  expect(replicator.datastore).not.toBe(baddatastore);
+
+                  expect(replicator.uri).toBe(uri);
+                  replicator.uri = baduri; // Assert readonly
+                  expect(replicator.uri).not.toBe(baduri);
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
+
+          it('should create a pull replicator with an empty request and response interceptor array', function(done) {
+            try {
+              var datastore = getDatastore();
+              expect(datastore).not.toBe(null);
+
+              var options = {
+                source: uri,
+                target: datastore,
+                requestInterceptors: [],
+                responseInterceptors: []
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options).then(function(replicator) {
+                  expect(replicator.token).not.toBe(null);
+                  replicator.token = badtoken; // Assert readonly
+                  expect(replicator.token).not.toBe(badtoken);
+
+                  expect(replicator.type).toBe('pull');
+                  replicator.type = badtype; // Assert readonly
+                  expect(replicator.type).not.toBe(badtype);
+
+                  expect(replicator.datastore).toBe(datastore);
+                  replicator.datastore = baddatastore; // Assert readonly
+                  expect(replicator.datastore).not.toBe(baddatastore);
+
+                  expect(replicator.uri).toBe(uri);
+                  replicator.uri = baduri; // Assert readonly
+                  expect(replicator.uri).not.toBe(baduri);
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
+            } catch (e) {
+              fail('Test failed with exception: ' + e);
+              done();
+            }
+          });
+
           it('should create a push replicator', function(done) {
             try {
-              var datastore = getDatastore(storeDescription);
+              var datastore = getDatastore();
               expect(datastore).not.toBe(null);
-              var builder = new ReplicatorBuilder();
-              expect(builder).not.toBe(null);
 
-              builder.push().from(datastore).to(uri).build()
-                                .then(function(replicator) {
-                                  expect(replicator.token).not.toBe(null);
-                                  replicator.token = badtoken; // Assert readonly
-                                  expect(replicator.token).not.toBe(badtoken);
+              var options = {
+                source: datastore,
+                target: uri
+              };
 
-                                  expect(replicator.type).toBe('push');
-                                  replicator.type = badtype; // Assert readonly
-                                  expect(replicator.type).not.toBe(badtype);
+              expect(Replicator.create).not.toBe(null);
 
-                                  expect(replicator.datastore).toBe(datastore);
-                                  replicator.datastore = baddatastore; // Assert readonly
-                                  expect(replicator.datastore).not.toBe(baddatastore);
+              Replicator.create(options).then(function(replicator) {
+                  expect(replicator.token).not.toBe(null);
+                  replicator.token = badtoken; // Assert readonly
+                  expect(replicator.token).not.toBe(badtoken);
 
-                                  expect(replicator.uri).toBe(uri);
-                                  replicator.uri = baduri; // Assert readonly
-                                  expect(replicator.uri).not.toBe(baduri);
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                  expect(replicator.type).toBe('push');
+                  replicator.type = badtype; // Assert readonly
+                  expect(replicator.type).not.toBe(badtype);
+
+                  expect(replicator.datastore).toBe(datastore);
+                  replicator.datastore = baddatastore; // Assert readonly
+                  expect(replicator.datastore).not.toBe(baddatastore);
+
+                  expect(replicator.uri).toBe(uri);
+                  replicator.uri = baduri; // Assert readonly
+                  expect(replicator.uri).not.toBe(baduri);
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             } catch (e) {
-              expect(e).toBe(null);
+              fail('Test failed with exception: ' + e);
+              done();
+            }
+          });
+
+          it('should create a push replicator with an empty request and response interceptor array', function(done) {
+            try {
+              var datastore = getDatastore();
+              expect(datastore).not.toBe(null);
+
+              var options = {
+                source: datastore,
+                target: uri,
+                requestInterceptors: [],
+                responseInterceptors: []
+              };
+
+              expect(Replicator.create).not.toBe(null);
+
+              Replicator.create(options).then(function(replicator) {
+                  expect(replicator.token).not.toBe(null);
+                  replicator.token = badtoken; // Assert readonly
+                  expect(replicator.token).not.toBe(badtoken);
+
+                  expect(replicator.type).toBe('push');
+                  replicator.type = badtype; // Assert readonly
+                  expect(replicator.type).not.toBe(badtype);
+
+                  expect(replicator.datastore).toBe(datastore);
+                  replicator.datastore = baddatastore; // Assert readonly
+                  expect(replicator.datastore).not.toBe(baddatastore);
+
+                  expect(replicator.uri).toBe(uri);
+                  replicator.uri = baduri; // Assert readonly
+                  expect(replicator.uri).not.toBe(baduri);
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
+            } catch (e) {
+              fail('Test failed with exception: ' + e);
               done();
             }
           });
@@ -899,19 +1072,29 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var pushOptions = {
+              source: datastore,
+              target: uri
+            };
+
+            var pullOptions = {
+              source: uri,
+              target: datastore
+            };
+
             var promises = [
-                new ReplicatorBuilder().pull().to(datastore).from(uri).build(),
-                new ReplicatorBuilder().push().from(datastore).to(uri).build(),
+              Replicator.create(pullOptions),
+              Replicator.create(pushOptions),
             ];
 
             Q.all(promises)
-                            .spread(function(pullReplicator, pushReplicator) {
-                              expect(pullReplicator.token).not.toEqual(pushReplicator.token);
-                            })
-                            .catch(function(error) {
-                              expect(error).toBe(null);
-                            })
-                            .fin(done);
+              .spread(function(pullReplicator, pushReplicator) {
+                expect(pullReplicator.token).not.toEqual(pushReplicator.token);
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+              })
+              .fin(done);
           });
 
           // Negative tests
@@ -919,72 +1102,95 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: null,
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(null).to(uri).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator source is null');  
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push target is null', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).to(null).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator target is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull source is null', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: null,
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(null).to(datastore).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator source is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is null', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri,
+              target: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).to(null).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator target is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -996,34 +1202,45 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: [],
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from([]).to(datastore).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator source is not a String');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is not a Datastore', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri,
+              target: []
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).to([]).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator target is not a Datastore');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1035,34 +1252,45 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: [],
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from([]).to(uri).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator source is not a Datastore');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push target is not a String', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+              target: []
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).to([]).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator target is not a String');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1074,91 +1302,67 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: datastore,
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().push().from(datastore).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator target is not set');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if pull target is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(uri).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator target is not set');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
               done();
             }
           });
+
           it('throws error if push source is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
-            try {
-              new ReplicatorBuilder().push().to(uri).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
-              done();
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
-          it('throws error if pull target is not set', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
+            var options = {
+              target: uri
+            };
+
+            expect(Replicator.create).not.toBe(null);
 
             try {
-              new ReplicatorBuilder().pull().to(datastore).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
-              done();
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
-          it('throws error if replication type is not set', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
-
-            try {
-              new ReplicatorBuilder().from(datastore).to(uri).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Push replicator source is not set');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1166,19 +1370,23 @@ exports.defineAutoTests = function() {
             }
           });
 
-          it('throws error if pull target is not set', function(done) {
+          it('throws error if pull source is not set', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              target: datastore
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().to(datastore).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Pull replicator source is not set');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1190,15 +1398,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri, 
+              target: datastore,
+              requestInterceptors: null
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(null).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Request interceptor is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1210,55 +1424,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
-            try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(null).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
-              done();
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
+            var options = {
+              source: uri, 
+              target: datastore,
+              responseInterceptors: null
+            };
 
-          it('throws error if request interceptor is empty', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
+            expect(Replicator.create).not.toBe(null);
 
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors().build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
-              done();
-            } catch (error) {
-              expect(error).not.toBe(null);
-              done();
-            }
-          });
-
-          it('throws error if response interceptor is empty', function(done) {
-            var datastore = getDatastore(storeDescription);
-            expect(datastore).not.toBe(null);
-
-            try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors().build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Response interceptor is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1270,15 +1450,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri, 
+              target: datastore,
+              requestInterceptors: 'foo'
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors('foo').build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Request interceptor is not a function or an array');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1290,15 +1476,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri, 
+              target: datastore,
+              responseInterceptors: 'foo'
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors('foo').build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Response interceptor is not a function or an array');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1310,15 +1502,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri, 
+              target: datastore,
+              requestInterceptors: ['foo']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(['foo']).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Request interceptor in an array is not a function');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1330,15 +1528,21 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var options = {
+              source: uri, 
+              target: datastore,
+              responseInterceptors: ['foo']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(['foo']).build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Response interceptor in an array is not a function');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1350,17 +1554,25 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var requestFunction = function(context) {
+              context.done();
+            };
+
+            var options = {
+              source: datastore,
+              target: uri,
+              requestInterceptors: [requestFunction, 'notaninterceptor']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addRequestInterceptors(function(context) {
-                context.done();
-              }, 'notaninterceptor').build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Request interceptor following a valid interceptor is not a function');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1372,17 +1584,25 @@ exports.defineAutoTests = function() {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
+            var responseFunction = function(context) {
+              context.done();
+            };
+
+            var options = {
+              source: datastore,
+              target: uri,
+              responseInterceptors: [responseFunction, 'notaninterceptor']
+            };
+
+            expect(Replicator.create).not.toBe(null);
+
             try {
-              new ReplicatorBuilder().pull().from(datastore).to(uri).addResponseInterceptors(function(context) {
-                context.done();
-              }, 'notaninterceptor').build()
-                                .then(function(replicator) {
-                                  expect(true).toBe(false);
-                                })
-                                .catch(function(e) {
-                                  expect(true).toBe(false);
-                                });
-              expect(true).toBe(false);
+              Replicator.create(options)
+                .then(function(replicator) {
+                })
+                .catch(function(e) {
+                });
+              fail('Response interceptor following a valid interceptor is not a function');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1396,6 +1616,9 @@ exports.defineAutoTests = function() {
 
         var testPullReplicator;
         var testPushReplicator;
+
+        var pullOptions;
+        var pushOptions;
 
         function getReplicator(type) {
           var rep;
@@ -1415,21 +1638,32 @@ exports.defineAutoTests = function() {
           var datastore = getDatastore(storeDescription);
           expect(datastore).not.toBe(null);
 
-          new ReplicatorBuilder().pull().from(uri).to(datastore).build()
-                        .then(function(pullReplicator) {
-                          expect(pullReplicator).not.toBe(null);
-                          testPullReplicator = pullReplicator;
+          pullOptions = {
+            source: uri,
+            target: datastore
+          };
 
-                          return new ReplicatorBuilder().push().from(datastore).to(uri).build();
-                        })
-                        .then(function(pushReplicator) {
-                          expect(pushReplicator).not.toBe(null);
-                          testPushReplicator = pushReplicator;
-                        })
-                        .catch(function(error) {
-                          expect(error).toBe(null);
-                        })
-                        .fin(done);
+          pushOptions = {
+            source: datastore,
+            target: uri
+          };
+
+          Replicator.create(pullOptions)
+            .then(function(pullReplicator) {
+              expect(pullReplicator).not.toBe(null);
+              testPullReplicator = pullReplicator;
+
+
+              return Replicator.create(pushOptions);
+            })
+            .then(function(pushReplicator) {
+              expect(pushReplicator).not.toBe(null);
+              testPushReplicator = pushReplicator;
+            })
+            .catch(function(error) {
+              expect(error).toBe(null);
+            })
+            .fin(done);
         });
 
         it('should contain method start', function() {
@@ -1441,8 +1675,6 @@ exports.defineAutoTests = function() {
           expect(pullReplicator.start).toBeDefined();
           expect(pushReplicator.start).toBeDefined();
         });
-
-
 
         it('should contain method getState', function() {
           var pullReplicator = getReplicator('pull');
@@ -1498,13 +1730,12 @@ exports.defineAutoTests = function() {
               expect(replicator).not.toBe(null);
 
               replicator.start()
-                                .then(function() {
-                                  expect(true).toBe(true);
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                .then(function() {
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             });
 
             it('should start push replication', function(done) {
@@ -1513,13 +1744,12 @@ exports.defineAutoTests = function() {
 
               // Start replication
               replicator.start()
-                                .then(function() {
-                                  expect(true).toBe(true);
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                .then(function() {
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             });
           }); // End-promises-tests
 
@@ -1538,7 +1768,7 @@ exports.defineAutoTests = function() {
               function poll(replicator) {
                 mtimer = setInterval(function() {
                   replicator.getState(function(error,
-                      result) {
+                    result) {
                     expect(error).toBe(null);
                     expect(result).not.toBe('Error');
                     if (result === 'Complete' || result === 'Error') {
@@ -1569,7 +1799,7 @@ exports.defineAutoTests = function() {
               function poll(replicator) {
                 mtimer = setInterval(function() {
                   replicator.getState(function(error,
-                      result) {
+                    result) {
                     expect(error).toBe(null);
                     expect(result).not.toBe('Error');
                     if (result === 'Complete' || result === 'Error') {
@@ -1606,9 +1836,9 @@ exports.defineAutoTests = function() {
 
               var repStatus = function(rep) {
                 rep.getState(function(error,
-                    result) {
+                  result) {
                   if (result ===
-                      'Complete') {
+                    'Complete') {
                     ncompletions++;
                   }
                   if (ncompletions > 1) {
@@ -1647,17 +1877,17 @@ exports.defineAutoTests = function() {
               function poll(replicator) {
                 mtimer = setInterval(function() {
                   replicator.getState()
-                                        .then(function(result) {
-                                          expect(result).not.toBe(null);
-                                          expect(result).not.toBe('Error');
-                                          if (result === 'Complete' || result === 'Error') {
-                                            stopPoll();
-                                            done();
-                                          }
-                                        })
-                                        .catch(function(error) {
-                                          expect(error).toBe(null);
-                                        });
+                    .then(function(result) {
+                      expect(result).not.toBe(null);
+                      expect(result).not.toBe('Error');
+                      if (result === 'Complete' || result === 'Error') {
+                        stopPoll();
+                        done();
+                      }
+                    })
+                    .catch(function(error) {
+                      expect(error).toBe(null);
+                    });
                 }, 500);
               }
 
@@ -1667,12 +1897,12 @@ exports.defineAutoTests = function() {
 
               // Start replication
               replicator.start()
-                                .then(function() {
-                                  poll(replicator); // Poll on the replication status
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                });
+                .then(function() {
+                  poll(replicator); // Poll on the replication status
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                });
             }, LONG_TIMEOUT);
 
             it('should poll push replication status until completion', function(done) {
@@ -1684,17 +1914,17 @@ exports.defineAutoTests = function() {
               function poll(replicator) {
                 mtimer = setInterval(function() {
                   replicator.getState()
-                                        .then(function(result) {
-                                          expect(result).not.toBe(null);
-                                          expect(result).not.toBe('Error');
-                                          if (result === 'Complete' || result === 'Error') {
-                                            stopPoll();
-                                            done();
-                                          }
-                                        })
-                                        .catch(function(error) {
-                                          expect(error).toBe(null);
-                                        });
+                    .then(function(result) {
+                      expect(result).not.toBe(null);
+                      expect(result).not.toBe('Error');
+                      if (result === 'Complete' || result === 'Error') {
+                        stopPoll();
+                        done();
+                      }
+                    })
+                    .catch(function(error) {
+                      expect(error).toBe(null);
+                    });
                 }, 500);
               }
 
@@ -1703,12 +1933,12 @@ exports.defineAutoTests = function() {
               }
 
               replicator.start()
-                                .then(function() {
-                                  poll(replicator); // Poll on the replication status
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                });
+                .then(function() {
+                  poll(replicator); // Poll on the replication status
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                });
             });
 
             it('should poll two replication\'s status until completion', function(done) {
@@ -1726,18 +1956,18 @@ exports.defineAutoTests = function() {
 
               var repStatus = function(rep) {
                 rep.getState()
-                                    .then(function(result) {
-                                      if (result === 'Complete') {
-                                        ncompletions++;
-                                      }
-                                      if (ncompletions > 1) {
-                                        stopPoll();
-                                        done();
-                                      }
-                                    })
-                                    .catch(function(error) {
-                                      expect(error).not.toBe(null);
-                                    });
+                  .then(function(result) {
+                    if (result === 'Complete') {
+                      ncompletions++;
+                    }
+                    if (ncompletions > 1) {
+                      stopPoll();
+                      done();
+                    }
+                  })
+                  .catch(function(error) {
+                    expect(error).not.toBe(null);
+                  });
               };
 
               function stopPoll() {
@@ -1747,14 +1977,14 @@ exports.defineAutoTests = function() {
 
               // Start replicators
               Q.all([pullReplicator.start(), pushReplicator.start()])
-                                .then(function() {
-                                  // Start polling on replication status
-                                  mtimer1 = poll(pullReplicator);
-                                  mtimer2 = poll(pushReplicator);
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                });
+                .then(function() {
+                  // Start polling on replication status
+                  mtimer1 = poll(pullReplicator);
+                  mtimer2 = poll(pushReplicator);
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                });
             });
           }); // End-promises-tests
 
@@ -1801,13 +2031,13 @@ exports.defineAutoTests = function() {
 
               // Start replication
               replicator.start()
-                                .then(function() {
-                                  return replicator.stop();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                .then(function() {
+                  return replicator.stop();
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             });
 
             it('should stop push replication', function(done) {
@@ -1816,13 +2046,13 @@ exports.defineAutoTests = function() {
 
               // Start replication
               replicator.start()
-                                .then(function() {
-                                  return replicator.stop();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                })
-                                .fin(done);
+                .then(function() {
+                  return replicator.stop();
+                })
+                .catch(function(error) {
+                  expect(error).toBe(null);
+                })
+                .fin(done);
             });
           }); // End-promises-tests
         }); // End-stop-tests
@@ -1838,28 +2068,33 @@ exports.defineAutoTests = function() {
             });
 
             replicator.start()
-                            .catch(function(error) {
-                              expect(error).toBe(null);
-                            });
+              .catch(function(error) {
+                expect(error).toBe(null);
+              });
           }, LONG_TIMEOUT);
 
           it('should register and fire an "error" event', function(done) {
             var datastore = getDatastore(storeDescription);
             expect(datastore).not.toBe(null);
 
-            new ReplicatorBuilder().pull().to(datastore).from(uri + 'foo').build()
-                            .then(function(replicator) {
-                              expect(replicator).not.toBe(null);
-                              replicator.on('error', function(message) {
-                                expect(message).not.toBe(null);
-                                done();
-                              });
+            var pullOptions = {
+              source: uri + 'foo',
+              target: datastore
+            };
 
-                              return replicator.start();
-                            })
-                            .catch(function(error) {
-                              expect(error).toBe(null);
-                            });
+            Replicator.create(pullOptions)
+              .then(function(replicator) {
+                expect(replicator).not.toBe(null);
+                replicator.on('error', function(message) {
+                  expect(message).not.toBe(null);
+                  done();
+                });
+
+                return replicator.start();
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+              });
           });
         });
 
@@ -1877,12 +2112,12 @@ exports.defineAutoTests = function() {
                     expect(replicator.destroyed).toBe(true);
                     done();
                   } catch (e) {
-                    expect(e).toBe(null);
+                    fail('Test failed with exception: ' + e);
                     done();
                   }
                 });
               } catch (e) {
-                expect(e).toBe(null);
+                fail('Test failed with exception: ' + e);
                 done();
               }
             });
@@ -1896,15 +2131,15 @@ exports.defineAutoTests = function() {
                 expect(replicator.destroyed).not.toBeDefined();
 
                 replicator.destroy()
-                                    .then(function() {
-                                      expect(replicator.destroyed).toBe(true);
-                                    })
-                                    .catch(function(error) {
-                                      expect(error).toBe(null);
-                                    })
-                                    .fin(done);
+                  .then(function() {
+                    expect(replicator.destroyed).toBe(true);
+                  })
+                  .catch(function(error) {
+                    expect(error).toBe(null);
+                  })
+                  .fin(done);
               } catch (e) {
-                expect(e).toBe(null);
+                fail('Test failed with exception: ' + e);
                 done();
               }
             });
@@ -1920,18 +2155,18 @@ exports.defineAutoTests = function() {
               expect(numDocs).not.toBe(null);
 
               replicator.datastore.getDocument('aardvark')
-                                .then(function(documentRevision) {
-                                  expect(documentRevision).not.toBe(null);
-                                  expect(documentRevision._id).not.toBe(null);
-                                  expect(documentRevision._id).toBe('aardvark');
-                                  done();
-                                });
+                .then(function(documentRevision) {
+                  expect(documentRevision).not.toBe(null);
+                  expect(documentRevision._id).not.toBe(null);
+                  expect(documentRevision._id).toBe('aardvark');
+                  done();
+                });
             });
 
             replicator.start()
-                            .catch(function(error) {
-                              expect(error).toBe(null);
-                            });
+              .catch(function(error) {
+                expect(error).toBe(null);
+              });
           }, LONG_TIMEOUT);
         });
 
@@ -1964,25 +2199,25 @@ exports.defineAutoTests = function() {
                 done();
               });
 
-              pullReplicator.on('complete',function(numDocs) {
+              pullReplicator.on('complete', function(numDocs) {
                 pushReplicator.datastore.createDocumentFromRevision({
-                  foo: 'bar',
-                })
-                                    .then(function(savedRevision) {
-                                      expect(savedRevision).not.toBe(null);
+                    foo: 'bar',
+                  })
+                  .then(function(savedRevision) {
+                    expect(savedRevision).not.toBe(null);
 
-                                      return pushReplicator.start();
-                                    })
-                                    .catch(function(error) {
-                                      expect(error).toBe(null);
-                                      done();
-                                    });
+                    return pushReplicator.start();
+                  })
+                  .catch(function(error) {
+                    expect(error).toBe(null);
+                    done();
+                  });
               });
 
               pullReplicator.start()
-                                .catch(function(e) {
-                                  expect(e).toBe(null);
-                                });
+                .catch(function(e) {
+                  fail('Test failed with exception: ' + e);
+                });
             } catch (e) {
               console.log(e);
               done();
@@ -1994,126 +2229,136 @@ exports.defineAutoTests = function() {
           it('should add a request header', function(done) {
             var datastore = getDatastore(storeDescription);
 
-            new ReplicatorBuilder()
-                .pull()
-                .from(uri)
-                .to(datastore)
-                            .addRequestInterceptors(function(context) {
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.headers).toBeDefined();
-                              expect(context.request.headers).not.toBe(null);
-                              expect(context.request.url).toBeDefined();
-                              expect(context.request.url).not.toBe(null);
+            var requestFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.headers).toBeDefined();
+              expect(context.request.headers).not.toBe(null);
+              expect(context.request.url).toBeDefined();
+              expect(context.request.url).not.toBe(null);
 
-                              expect(context.response).toBeDefined();
-                              expect(context.response).toBe(null);
+              expect(context.response).toBeDefined();
+              expect(context.response).toBe(null);
 
-                              expect(context.replayRequest).toBeDefined();
-                              expect(context.replayRequest).not.toBe(null);
+              expect(context.replayRequest).toBeDefined();
+              expect(context.replayRequest).not.toBe(null);
 
-                              context.request.headers['x-my-foo-header'] = 'bar';
-                              context.done();
-                            })
-                            .addResponseInterceptors(function(context) {
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.headers).toBeDefined();
-                              expect(context.request.headers).not.toBe(null);
-                              expect(context.request.headers['x-my-foo-header']).toBeDefined();
-                              expect(context.request.headers['x-my-foo-header']).toBe('bar');
-                              expect(context.request.url).toBeDefined();
-                              expect(context.request.url).not.toBe(null);
+              context.request.headers['x-my-foo-header'] = 'bar';
+              context.done();
+            };
 
-                              expect(context.response).toBeDefined();
-                              expect(context.response).not.toBe(null);
-                              expect(context.response.statusCode).toBeDefined();
-                              expect(context.response.statusCode).not.toBe(null);
-                              expect(context.response.headers).toBeDefined();
-                              expect(context.response.headers).not.toBe(null);
+            var responseFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.headers).toBeDefined();
+              expect(context.request.headers).not.toBe(null);
+              expect(context.request.headers['x-my-foo-header']).toBeDefined();
+              expect(context.request.headers['x-my-foo-header']).toBe('bar');
+              expect(context.request.url).toBeDefined();
+              expect(context.request.url).not.toBe(null);
 
-                              expect(context.replayRequest).toBeDefined();
-                              expect(context.replayRequest).not.toBe(null);
+              expect(context.response).toBeDefined();
+              expect(context.response).not.toBe(null);
+              expect(context.response.statusCode).toBeDefined();
+              expect(context.response.statusCode).not.toBe(null);
+              expect(context.response.headers).toBeDefined();
+              expect(context.response.headers).not.toBe(null);
 
-                              context.done();
+              expect(context.replayRequest).toBeDefined();
+              expect(context.replayRequest).not.toBe(null);
 
-                            }).build()
-                                .then(function(replicator) {
-                                  expect(replicator).not.toBe(null);
+              context.done();
+            };
 
-                                  replicator.on('complete', function(numDocs) {
-                                    expect(numDocs).not.toBe(null);
+            var options = {
+              source: uri,
+              target: datastore,
+              requestInterceptors: requestFunction,
+              responseInterceptors: responseFunction
+            };
 
-                                    replicator.datastore.getDocument('aardvark')
-                                            .then(function(documentRevision) {
-                                              expect(documentRevision).not.toBe(null);
-                                              expect(documentRevision._id).not.toBe(null);
-                                              expect(documentRevision._id).toBe('aardvark');
-                                              done();
-                                            });
-                                  });
+            Replicator.create(options)
+              .then(function(replicator) {
+                expect(replicator).not.toBe(null);
 
-                                  return replicator.start();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                  done();
-                                });
+                replicator.on('complete', function(numDocs) {
+                  expect(numDocs).not.toBe(null);
+
+                  replicator.datastore.getDocument('aardvark')
+                    .then(function(documentRevision) {
+                      expect(documentRevision).not.toBe(null);
+                      expect(documentRevision._id).not.toBe(null);
+                      expect(documentRevision._id).toBe('aardvark');
+                      done();
+                    });
+                });
+
+                return replicator.start();
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+                done();
+              });
           }, LONG_TIMEOUT);
 
           it('should timeout', function(done) {
             var datastore = getDatastore(storeDescription);
 
-            new ReplicatorBuilder()
-                .pull()
-                .from(uri)
-                .to(datastore)
-                            .addRequestInterceptors(function(context) {
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.headers).toBeDefined();
-                              expect(context.request.headers).not.toBe(null);
+            var requestFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.headers).toBeDefined();
+              expect(context.request.headers).not.toBe(null);
 
-                              context.request.headers['x-my-foo-header'] = 'bar';
-                              // NOT calling context.done() to force a timeout
-                            })
-                            .addResponseInterceptors(function(context) {
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.headers).toBeDefined();
-                              expect(context.request.headers).not.toBe(null);
-                              expect(context.request.headers['x-my-foo-header']).not.toBeDefined();
+              context.request.headers['x-my-foo-header'] = 'bar';
+              // NOT calling context.done() to force a timeout
+            };
 
-                              context.done();
+            var responseFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.headers).toBeDefined();
+              expect(context.request.headers).not.toBe(null);
+              expect(context.request.headers['x-my-foo-header']).not.toBeDefined();
 
-                            }).build()
-                                .then(function(replicator) {
-                                  expect(replicator).not.toBe(null);
+              context.done();
+            };
 
-                                  // Shortening the timeout duration
-                                  replicator.interceptors.timeout = 5000;
+            var options = {
+              source: uri,
+              target: datastore,
+              requestInterceptors: requestFunction,
+              responseInterceptors: responseFunction
+            };
 
-                                  replicator.on('complete', function(numDocs) {
-                                    expect(numDocs).not.toBe(null);
+            Replicator.create(options)
+              .then(function(replicator) {
+                expect(replicator).not.toBe(null);
 
-                                    replicator.datastore.getDocument('aardvark')
-                                            .then(function(documentRevision) {
-                                              expect(documentRevision).not.toBe(null);
-                                              expect(documentRevision._id).not.toBe(null);
-                                              expect(documentRevision._id).toBe('aardvark');
-                                              done();
-                                            });
-                                  });
+                // Shortening the timeout duration
+                replicator.interceptorTimeout = 5000;
 
-                                  return replicator.start();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                              }).fin(done);
+                replicator.on('complete', function(numDocs) {
+                  expect(numDocs).not.toBe(null);
+
+                  replicator.datastore.getDocument('aardvark')
+                    .then(function(documentRevision) {
+                      expect(documentRevision).not.toBe(null);
+                      expect(documentRevision._id).not.toBe(null);
+                      expect(documentRevision._id).toBe('aardvark');
+                      done();
+                    });
+                });
+
+                return replicator.start();
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+              }).fin(done);
           });
 
           it('should execute two interceptors', function(done) {
@@ -2165,36 +2410,38 @@ exports.defineAutoTests = function() {
               context.done();
             };
 
-            new ReplicatorBuilder()
-                .pull()
-                .from(uri)
-                .to(datastore)
-                .addRequestInterceptors(reqInterceptor1, reqInterceptor2)
-                .addResponseInterceptors(resInterceptor1, resInterceptor2).build()
-                                .then(function(replicator) {
-                                  expect(replicator).not.toBe(null);
+            var options = {
+              source: uri,
+              target: datastore,
+              requestInterceptors: [reqInterceptor1, reqInterceptor2],
+              responseInterceptors: [resInterceptor1, resInterceptor2]
+            };
 
-                                  // Shortening the timeout duration
-                                  replicator.interceptors.timeout = 5000;
+            Replicator.create(options)
+              .then(function(replicator) {
+                expect(replicator).not.toBe(null);
 
-                                  replicator.on('complete', function(numDocs) {
-                                    expect(numDocs).not.toBe(null);
+                // Shortening the timeout duration
+                replicator.interceptorTimeout = 5000;
 
-                                    replicator.datastore.getDocument('aardvark')
-                                            .then(function(documentRevision) {
-                                              expect(documentRevision).not.toBe(null);
-                                              expect(documentRevision._id).not.toBe(null);
-                                              expect(documentRevision._id).toBe('aardvark');
-                                              done();
-                                            });
-                                  });
+                replicator.on('complete', function(numDocs) {
+                  expect(numDocs).not.toBe(null);
 
-                                  return replicator.start();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                  done();
-                                });
+                  replicator.datastore.getDocument('aardvark')
+                    .then(function(documentRevision) {
+                      expect(documentRevision).not.toBe(null);
+                      expect(documentRevision._id).not.toBe(null);
+                      expect(documentRevision._id).toBe('aardvark');
+                      done();
+                    });
+                });
+
+                return replicator.start();
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+                done();
+              });
           }, LONG_TIMEOUT);
 
           it('should set the replay flag', function(done) {
@@ -2202,64 +2449,69 @@ exports.defineAutoTests = function() {
 
             var numTries = 0;
             var url = null;
-            new ReplicatorBuilder()
-                .pull()
-                .from(uri + 'doesnotexist')
-                .to(datastore)
-                            .addRequestInterceptors(function(context) {
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.url).toBeDefined();
-                              expect(context.request.url).not.toBe(null);
 
-                              // Capture the first request url
-                              if (!url) {
-                                url = context.request.url;
-                              }
+            var requestFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.url).toBeDefined();
+              expect(context.request.url).not.toBe(null);
 
-                              context.done();
-                            })
-                            .addResponseInterceptors(function(context) {
+              // Capture the first request url
+              if (!url) {
+                url = context.request.url;
+              }
 
-                              expect(context).not.toBe(null);
-                              expect(context.request).toBeDefined();
-                              expect(context.request).not.toBe(null);
-                              expect(context.request.url).toBeDefined();
-                              expect(context.request.url).not.toBe(null);
-                              expect(context.response.statusCode).toBeDefined();
-                              expect(context.response.statusCode).not.toBe(null);
-                              expect(context.replayRequest).toBeDefined();
-                              expect(context.replayRequest).not.toBe(null);
+              context.done();
+            };
 
-                              // Tick up the number of times the first request has been sent
-                              if (context.request.url === url) {
-                                numTries++;
+            var responseFunction = function(context) {
+              expect(context).not.toBe(null);
+              expect(context.request).toBeDefined();
+              expect(context.request).not.toBe(null);
+              expect(context.request.url).toBeDefined();
+              expect(context.request.url).not.toBe(null);
+              expect(context.response.statusCode).toBeDefined();
+              expect(context.response.statusCode).not.toBe(null);
+              expect(context.replayRequest).toBeDefined();
+              expect(context.replayRequest).not.toBe(null);
 
-                                // If the url has only been requested once try again
-                                if (context.response.statusCode === 404 && numTries < 2) {
-                                  context.replayRequest = true;
-                                }
-                              }
+              // Tick up the number of times the first request has been sent
+              if (context.request.url === url) {
+                numTries++;
 
-                              context.done();
+                // If the url has only been requested once try again
+                if (context.response.statusCode === 404 && numTries < 2) {
+                  context.replayRequest = true;
+                }
+              }
 
-                            }).build()
-                                .then(function(replicator) {
-                                  expect(replicator).not.toBe(null);
+              context.done();
+            };
 
-                                  replicator.on('error', function(error) {
-                                    expect(error).not.toBe(null);
-                                    expect(numTries).toBe(2);
-                                    done();
-                                  });
+            var options = {
+              source: uri + 'doesnotexist',
+              target: datastore,
+              requestInterceptors: requestFunction,
+              responseInterceptors: responseFunction
+            };
 
-                                  return replicator.start();
-                                })
-                                .catch(function(error) {
-                                  expect(error).toBe(null);
-                                  done();
-                                });
+            Replicator.create(options)
+              .then(function(replicator) {
+                expect(replicator).not.toBe(null);
+
+                replicator.on('error', function(error) {
+                  expect(error).not.toBe(null);
+                  expect(numTries).toBe(2);
+                  done();
+                });
+
+                return replicator.start();
+              })
+              .catch(function(error) {
+                expect(error).toBe(null);
+                done();
+              });
           });
         });
       }); // End-Replicator-tests

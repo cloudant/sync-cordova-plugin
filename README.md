@@ -128,16 +128,20 @@ device the the remote database.
 Replication is simple to get started in the common cases:
 
 ```js
-var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
+var Replicator = require('cloudant-sync.Replicator');
 
 var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';
 
+// Options object to create a pull replicator
+var pullReplicatorOptions = {
+    source: uri,
+    target: datastore
+};
+
 // Replicate from the local to remote database
-var builder = new ReplicatorBuilder();
-builder.push().from(datastore).to(uri).build()
-    .then(function (replicator) {
-        replicator.start(); // Fire-and-forget (there are easy ways to monitor the state too)
-    }).done();
+Replicator.create(pullReplicatorOptions).then(function (replicator) {
+    replicator.start(); // Fire-and-forget (there are easy ways to monitor the state too)
+}).done();
 ```
 
 Read more in [the replication docs](plugin/doc/replication.md).

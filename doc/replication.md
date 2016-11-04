@@ -69,10 +69,10 @@ From the device side, replication is straightforward. You can replicate from a
 local datastore to a remote database, from a remote database to a local
 datastore, or both ways to implement synchronisation.
 
-Replications are set up in code on a device. Use a `ReplicatorBuilder` to create
-a pre-configured `Replicator` object. Each `Replicator`
-object can be register an event handler for when replication
-completes or encounters an error.
+Replications are set up in code on a device. Use `Replicator` with 
+the appropriate source and target options to configure and create
+the object. Each `Replicator` object can register an event handler 
+for when replication completes or encounters an error.
 
 In this example we replicate a local Datastore to a remote database:
 
@@ -83,11 +83,17 @@ var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
 DatastoreManager.openDatastore('my_datastore')
     .then(function (datastore) {
         // Username/password are supplied in the URL and can be Cloudant API keys
-        var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';   
+        var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';  
+
+        // Options object containing the source and target for push replication
+        var pushReplicatorOptions = {
+            source: datastore,
+            target: uri
+        }
 
         // Create a replicator that replicates changes from the local
         // Datastore to the remote database.
-        return new ReplicatorBuilder().push().from(datastore).to(uri).build();
+        return Replicator.create(pushReplicatorOptions);
     })
     .then(function (replicator) {
 
@@ -102,6 +108,9 @@ DatastoreManager.openDatastore('my_datastore')
 
         // start replication
         replicator.start();
+
+        // After replication completes, destroy the replicator object
+        replicator.destroy();
     }).done();
 ```
 
@@ -115,9 +124,15 @@ DatastoreManager.openDatastore('my_datastore')
         // Username/password are supplied in the URL and can be Cloudant API keys
         var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';   
 
+        // Options object containing the source and target for pull replication
+        var pullReplicatorOptions = {
+            source: uri,
+            target: datastore
+        }
+
         // Create a replicator that replicates changes from the remote database
         // to the local Datastore.
-        return new ReplicatorBuilder().pull().from(uri).to(datastore).build();
+        return Replicator.create(pullReplicatorOptions);
     })
     .then(function (replicator) {
 
@@ -132,6 +147,9 @@ DatastoreManager.openDatastore('my_datastore')
 
         // start replication
         replicator.start();
+
+        // After replication completes, destroy the replicator object
+        replicator.destroy();
     }).done();
 ```
 
@@ -149,16 +167,28 @@ DatastoreManager.openDatastore('my_datastore')
     .then(function (my_datastore) {
         datastore = my_datastore;
 
+        // Options object containing the source and target for pull replication
+        var pullReplicatorOptions = {
+            source: uri,
+            target: datastore
+        }
+
         // Create a replicator that replicates changes from the remote database
         // to the local Datastore.
-        return new ReplicatorBuilder().pull().from(uri).to(datastore).build();
+        return Replicator.create(pullReplicatorOptions);
     })
     .then(function (replicator) {
         pullReplicator = replicator;
 
+        // Options object containing the source and target for push replication
+        var pushReplicatorOptions = {
+            source: datastore,
+            target: uri
+        }
+
         // Create a replicator that replicates changes from the local
         // Datastore to the remote database.
-        return new ReplicatorBuilder().push().from(datastore).to(uri).build();
+        return Replicator.create(pushReplicatorOptions);
     })
     .then(function (replicator) {
         pushReplicator = replicator;
@@ -166,22 +196,30 @@ DatastoreManager.openDatastore('my_datastore')
         // register event handlers
         pushReplicator.on('complete', function (numDocs) {
             console.log('Push complete! Replicated ' + numDocs + ' documents.');
+            // Destroy push replicator object
+            pushReplicator.destroy().fin(done);
 
         });
 
         pushReplicator.on('error', function (message) {
             console.error('Push failed! Error replicating to remote: ' + message);
+            // Destroy push replicator object
+            pushReplicator.destroy();
         });
 
         pullReplicator.on('complete', function (numDocs) {
             console.log('Pull complete! Replicated ' + numDocs + ' documents');
 
-            // After pull replication completes, start push replication
+            // After pull replication completes, destroy pull replicator object
+            // and start push replication
+            pullReplicator.destroy();
             pushReplicator.start();
         });
 
         pullReplicator.on('error', function (message) {
             console.error('Pull failed! Error replicating to remote: ' + message);
+            // Destroy pull replicator object
+            pullReplicator.destroy();
         });
 
         // start pull replication

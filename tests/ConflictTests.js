@@ -14,7 +14,7 @@
  */
 
 var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManager;
-var ReplicatorBuilder = require('cloudant-sync.ReplicatorBuilder');
+var Replicator = require('cloudant-sync.Replicator');
 var TestUtil = require('cloudant-sync-tests.TestUtil');
 var RemoteDbUtils = require('cloudant-sync-tests.RemoteDbUtils');
 var _ = require('cloudant-sync.lodash_funcs');
@@ -91,10 +91,27 @@ exports.defineAutoTests = function () {
   }
 
   function createReplicators() {
-    var r1 = new ReplicatorBuilder().pull().from(uri).to(localStore1).build();
-    var r2 = new ReplicatorBuilder().push().from(localStore1).to(uri).build();
-    var r3 = new ReplicatorBuilder().pull().from(uri).to(localStore2).build();
-    var r4 = new ReplicatorBuilder().push().from(localStore2).to(uri).build();
+    var pushOptions = {
+      source: localStore1,
+      target: uri
+    };
+    var pullOptions = {
+      source: uri,
+      target: localStore1
+    };
+    var r1 = new Replicator.create(pullOptions);
+    var r2 = new Replicator.create(pushOptions);
+
+    pushOptions = {
+      source: localStore2,
+      target: uri
+    };
+    pullOptions = {
+      source: uri,
+      target: localStore2
+    };
+    var r3 = new Replicator.create(pullOptions);
+    var r4 = new Replicator.create(pushOptions);
 
     return Q.allSettled([r1, r2, r3, r4])
             .then(function (results) {
