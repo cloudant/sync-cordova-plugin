@@ -38,6 +38,64 @@
 #define kCDTQuerySkip       @"skip"
 
 
+// This provides a simple wrapper around NSMutableDictionary to use a serial dispatch queue
+// to ensure that the underlying NSMutableDictionary is only accessed from one thread at a time.
+// Only the operations required by CDTSyncPlugin are wrapped and exposed.
+@interface ThreadSafeMutableDictionary<KeyType, ObjectType> : NSObject
+{
+    NSMutableDictionary<KeyType, ObjectType> *dictionary;
+    dispatch_queue_t queue;
+}
+-(id) initWithName:(NSString *) name;
+-(void) setObject:(ObjectType)anObject forKey:(id<NSCopying>)aKey;
+-(void) removeObjectForKey:(KeyType)aKey;
+-(ObjectType) objectForKey:(KeyType)aKey;
+-(NSUInteger) count;
+@end
+
+@implementation ThreadSafeMutableDictionary
+-(id) initWithName:(NSString *) name
+{
+    if (self = [super init]) {
+        queue = dispatch_queue_create([name UTF8String], DISPATCH_QUEUE_SERIAL);
+        dictionary = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+-(void) setObject:(id)anObject forKey:(id<NSCopying>)aKey
+{
+    dispatch_sync(queue, ^{
+        [dictionary setObject:anObject forKey:aKey];
+    });
+}
+
+-(void) removeObjectForKey:(id)aKey
+{
+    dispatch_sync(queue, ^{
+        [dictionary removeObjectForKey:aKey];
+    });
+}
+
+-(id) objectForKey:(id)aKey
+{
+    __block id result = nil;
+    dispatch_sync(queue, ^{
+        result = [dictionary objectForKey:aKey];
+    });
+    return result;
+}
+
+-(NSUInteger) count
+{
+    __block NSUInteger result = 0;
+    dispatch_sync(queue, ^{
+        result = dictionary.count;
+    });
+    return result;
+}
+@end
+
 @interface ConflictResolverWrapper  : NSObject<CDTConflictResolver>
 @property (strong, readonly) NSString* callbackId;
 @property (nonatomic, weak) id <CDVCommandDelegate> commandDelegate;
@@ -126,12 +184,12 @@
 
 @interface CDTSyncPlugin ()
 
-@property NSMutableDictionary<NSString*, CDTDatastore*> *datastoreMap;
-@property NSMutableDictionary<NSNumber*, CDTReplicator*> *replicatorMap;
-@property NSMutableDictionary<NSNumber*, CDTSyncPluginDelegate*> *delegateMap;
-@property NSMutableDictionary<NSNumber*, CDTSyncPluginInterceptor*> *interceptorMap;
-@property NSMutableDictionary<NSNumber*, CDTDatastoreManager*> *datastoreManagers;
-@property NSMutableDictionary<NSString*, ConflictResolverWrapper*> *resolverMap;
+@property ThreadSafeMutableDictionary<NSString*, CDTDatastore*> *datastoreMap;
+@property ThreadSafeMutableDictionary<NSNumber*, CDTReplicator*> *replicatorMap;
+@property ThreadSafeMutableDictionary<NSNumber*, CDTSyncPluginDelegate*> *delegateMap;
+@property ThreadSafeMutableDictionary<NSNumber*, CDTSyncPluginInterceptor*> *interceptorMap;
+@property ThreadSafeMutableDictionary<NSNumber*, CDTDatastoreManager*> *datastoreManagers;
+@property ThreadSafeMutableDictionary<NSString*, ConflictResolverWrapper*> *resolverMap;
 
 @end
 
@@ -139,12 +197,12 @@
 
 -(void) pluginInitialize
 {
-    self.datastoreMap = [NSMutableDictionary dictionary];
-    self.replicatorMap = [NSMutableDictionary dictionary];
-    self.delegateMap = [NSMutableDictionary dictionary];
-    self.interceptorMap = [NSMutableDictionary dictionary];
-    self.datastoreManagers = [NSMutableDictionary dictionary];
-    self.resolverMap = [NSMutableDictionary dictionary];
+    self.datastoreMap = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.datastoreMap"];
+    self.replicatorMap = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.replicatorMap"];
+    self.delegateMap = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.delegateMap"];
+    self.interceptorMap = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.interceptorMap"];
+    self.datastoreManagers = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.datastoreManagers"];
+    self.resolverMap = [[ThreadSafeMutableDictionary alloc] initWithName:@"com.cloudant.sync.cordova.resolverMap"];
 }
 
 - (void)createDatastoreManager:(CDVInvokedUrlCommand*)command
@@ -162,7 +220,7 @@
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:msg];
         } else {
             NSNumber *dsmID = @(self.datastoreManagers.count);
-            self.datastoreManagers[dsmID] = manager;
+            [self.datastoreManagers setObject:manager forKey:dsmID];
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"id":dsmID}];
         }
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
@@ -186,7 +244,7 @@
         NSError *error = nil;
         if(!datastore){
             // If there is no cached store, create one
-            CDTDatastoreManager *manager = self.datastoreManagers[datastoreManagerID];
+            CDTDatastoreManager *manager = [self.datastoreManagers objectForKey:datastoreManagerID];
             datastore = [manager datastoreNamed:name error:&error];
 
             if(!error && datastore){
@@ -227,7 +285,7 @@
         NSString *name = [command argumentAtIndex:1];
 
         NSError *error;
-        CDTDatastoreManager * manager = self.datastoreManagers[datastoreManagerID];
+        CDTDatastoreManager * manager = [self.datastoreManagers objectForKey:datastoreManagerID];
         [manager deleteDatastoreNamed:name error:&error];
         [self.datastoreMap removeObjectForKey:name];
 
@@ -252,7 +310,7 @@
         BOOL isCreate = [[command argumentAtIndex:2] boolValue];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSError *jsonConversionError = nil;
             CDTDocumentRevision *revision = [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
@@ -309,7 +367,7 @@
         NSString *docId = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             // perform fetch
             NSError *error = nil;
@@ -350,7 +408,7 @@
         NSDictionary *docRevisionJSON = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSError *jsonConversionError = nil;
             CDTDocumentRevision *revisionToDelete = [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
@@ -404,7 +462,7 @@
         NSString *indexName = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSString *message = [cachedStore ensureIndexed:fields withName:indexName];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:message];
@@ -429,7 +487,7 @@
         NSString *indexName = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             BOOL message = [cachedStore deleteIndexNamed:indexName];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:message];
@@ -455,7 +513,7 @@
         NSDictionary *cloudantQueryDictionary = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSDictionary *selector = cloudantQueryDictionary[kCDTQuerySelector];
 
@@ -553,10 +611,10 @@
             if (replicator) {
                 CDTSyncPluginDelegate *delegate = [[CDTSyncPluginDelegate alloc] initWithCommandDelegate:self.commandDelegate callbackId:command.callbackId];
                 // Must cache delegate for strong reference
-                self.delegateMap[token] = delegate;
-                self.replicatorMap[token] = replicator;
+                [self.delegateMap setObject:delegate forKey:token];
+                [self.replicatorMap setObject:replicator forKey:token];
                 NSLog(@"Adding interceptor with token: %@", token);
-                self.interceptorMap[token] = interceptor;
+                [self.interceptorMap setObject:interceptor forKey:token];
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 [pluginResult setKeepCallbackAsBool:YES];
             } else {
@@ -603,7 +661,7 @@
 
         CDTReplicator *replicator = [self.replicatorMap objectForKey:token];
         if (replicator){
-            replicator.delegate = self.delegateMap[token];
+            replicator.delegate = [self.delegateMap objectForKey:token];
             [replicator startWithError:&error];
             if (error){
                 // Error occurred, create response
@@ -695,7 +753,7 @@
 
     [self.commandDelegate runInBackground:^{
 
-        CDTSyncPluginInterceptor *interceptor = self.interceptorMap[token];
+        CDTSyncPluginInterceptor *interceptor = [self.interceptorMap objectForKey:token];
         if(!interceptor){
             // Error occurred, create response
             NSString *message = [NSString stringWithFormat:NSLocalizedString(@"Cannot unlock interceptor with token %@.  Does not exist", nil), token];
@@ -723,7 +781,7 @@
         NSString *name = [command argumentAtIndex:0];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSArray *docIds = [cachedStore getConflictedDocumentIds];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:docIds];
@@ -744,7 +802,7 @@
         NSString *documentId = [command argumentAtIndex:1];
 
         // Lookup store in cache
-        CDTDatastore *cachedStore = self.datastoreMap[name];
+        CDTDatastore *cachedStore = [self.datastoreMap objectForKey:name];
         if(cachedStore){
             NSError *error;
 
@@ -753,7 +811,7 @@
             // Store the conflictResolver in a map indexed by a unique ID that can be passed around
             // to retrieve the conflictResolver from other callbacks. The callbackId is unique
             // to each invocation of this method so we'll use that.
-            self.resolverMap[command.callbackId] = conflictResolver;
+            [self.resolverMap setObject:conflictResolver forKey:command.callbackId];
             [cachedStore resolveConflictsForDocument:documentId
                                             resolver:conflictResolver
                                                error:&error];
@@ -777,7 +835,7 @@
         NSError *jsonConversionError = nil;
         CDTDocumentRevision *revision = docRevisionJSON ? [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError] : nil;
         if(!jsonConversionError){
-            ConflictResolverWrapper *conflictResolver = self.resolverMap[resolverId];
+            ConflictResolverWrapper *conflictResolver = [self.resolverMap objectForKey:resolverId];
             [self.resolverMap removeObjectForKey:resolverId];
             [conflictResolver setRevision:revision];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
