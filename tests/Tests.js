@@ -4,6 +4,7 @@ var crud = require('cloudant-sync-tests.CRUDTests');
 var indexAndQuery = require('cloudant-sync-tests.IndexAndQueryTests');
 var replication = require('cloudant-sync-tests.ReplicationTests');
 var datastoreTests = require('cloudant-sync-tests.DatastoreTests');
+var conflictTests = require('cloudant-sync-tests.ConflictTests');
 
 exports.defineAutoTests = function() {
   // Time out in milliseconds
@@ -14,4 +15,5 @@ exports.defineAutoTests = function() {
   indexAndQuery.defineAutoTests();
   replication.defineAutoTests();
   datastoreTests.defineAutoTests();
+  conflictTests.defineAutoTests();
 };

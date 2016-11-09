@@ -261,80 +261,6 @@ Datastore.prototype.close = function(callback) {
 };
 
 /**
- * @private
- * @summary Checks the given 'dbName' is defined and is a string.
- * @param {type} dbName - the value to check
- * @throws {Error} if the given 'dbName' is undefined or not a String.
- */
-function validateDbName(dbName) {
-  if (_.isEmpty(dbName)) {
-    throw new Error('dbName must exist');
-  }
-
-  if (!_.isString(dbName)) {
-    throw new Error('dbName must be a String');
-  }
-}
-
-/**
- * @private
- * @summary Checks various attributes of the given 'documentRevision' to ensure
- * it appears to be a valid document revision.
- * @param {type} documentRevision - the 'documentRevision' to check.
- * @throws {Error} containing details of the problem if the validity checks
- * fail.
- */
-function validateDocumentRevision(documentRevision) {
-  if (!documentRevision) {
-    throw new Error('documentRevision must exist');
-  }
-
-  if (!_.isObject(documentRevision) ||
-   _.isArray(documentRevision) ||
-   _.isFunction(documentRevision)) {
-    throw new Error('documentRevision must be an Object');
-  }
-
-  var docId = documentRevision._id || null;
-  var rev = documentRevision._rev || null;
-
-  if (rev && !docId) {
-    throw new Error('\'_id\' is required if \'_rev\' is specified.');
-  }
-
-  if (documentRevision._attachments) {
-    var attachments = documentRevision._attachments;
-    if (_.isEmpty(attachments)) {
-      throw new Error(
-          'documentRevision contained invalid attachments.  _attachments' +
-          ' had no body'
-      );
-    }
-
-    for (var attachmentName in attachments) {
-      var attachment = attachments[attachmentName];
-      if (_.isEmpty(attachment)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no body');
-      }
-
-      if (_.isEmpty(attachment.data)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no data');
-      }
-
-      if (_.isEmpty(attachment.contentType)) {
-        throw new Error(
-            'documentRevision contained invalid attachment.  ' +
-            attachmentName + ' had no content_type');
-      }
-    }
-  }
-}
-
-/**
  * @summary Adds a new document with body and attachments from revision.
  * @description If '_id' in the revision is null or undefined, the document's
  * '_id' will be auto-generated
@@ -400,13 +326,7 @@ Datastore.prototype.updateDocumentFromRevision =
  * either the retrieved document revision or an Error.
  */
 Datastore.prototype.getDocument = function(documentId, callback) {
-  if (_.isEmpty(documentId)) {
-    throw new Error('documentId must exist');
-  }
-
-  if (!_.isString(documentId)) {
-    throw new Error('documentId must be an String');
-  }
+  validateDocumentId(documentId);
 
   var deferred = Q.defer();
 
@@ -612,7 +532,215 @@ Datastore.prototype.find = function(query, callback) {
   return deferred.promise;
 };
 
+/**
+ * @summary Gets all document ids in the datastore that have conflicts
+ * in their revision tree.
+ *
+ * @param {Datastore~getConflictedDocumentIdsCallback} [callback] - The function
+ *  to call after attempting to get the conflicted document IDs.
+ *
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
+ * either an Array of the document IDs or an Error.
+ */
+Datastore.prototype.getConflictedDocumentIds = function(callback) {
+  var deferred = Q.defer();
+
+  function successHandler(results) {
+    deferred.resolve(results);
+  }
+
+  function errorHandler(error) {
+    deferred.reject(error);
+  }
+
+  exec(successHandler,
+      errorHandler,
+      'CloudantSync',
+      'getConflictedDocumentIds',
+      [this.name]);
+
+  deferred.promise.nodeify(callback);
+  return deferred.promise;
+};
+
+/**
+ * @summary Resolve conflicts for specified Document using the given
+ * 'conflictResolver'.
+ * @param {String} documentId - The id of the document whose conflicts we
+ * want to resolve.
+ * @param {Datastore~resolveConflictsCallback} [conflictResolver] - The function
+ *  to call to resolve conflicts.
+ * @param {Datastore~resolveConflictsForDocumentCallback} [callback] - The
+ * function to call after attempting to resolve conflicts.
+ *
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
+ * either an Array of the query results or an Error.
+ */
+Datastore.prototype.resolveConflictsForDocument =
+function(documentId, conflictResolver, callback) {
+  validateDocumentId(documentId);
+
+  if (!_.isFunction(conflictResolver)) {
+    throw new Error('conflictResolver must be a function');
+  }
+
+  var deferred = Q.defer();
+  var firstCall = true;
+
+  function successHandler(results) {
+    if (firstCall && _.isObject(results)) {
+      var docId = results['docId'];
+      var conflicts = results['conflicts'];
+      var resolverId = results['resolverId'];
+      var conflictResult = conflictResolver(docId, conflicts);
+      returnResolvedDocument(conflictResult, resolverId, null);
+      firstCall = false;
+    } else {
+      deferred.resolve(results);
+    }
+  }
+
+  function errorHandler(error) {
+    deferred.reject(error);
+  }
+
+  exec(successHandler,
+      errorHandler,
+      'CloudantSync',
+      'resolveConflictsForDocument',
+      [this.name, documentId]);
+
+  deferred.promise.nodeify(callback);
+  return deferred.promise;
+};
+
+/**
+ * @summary Passes the resolved document back to the native code.
+ * @param {Object} documentRevision - The resolved document revision.
+ * @param {String} resolverId - The unique string that identifies the
+ * conflict resolver we want to pass the result to in the native code.
+ * @param {Datastore~returnResolvedDocumentCallback} [callback] - The function
+ * to call after passing the resolved document back to the native code.
+ *
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
+ * either an Array of the query results or an Error.
+ */
+function returnResolvedDocument(documentRevision, resolverId, callback) {
+  if (documentRevision) {
+    validateDocumentRevision(documentRevision);
+  }
+
+  var deferred = Q.defer();
+
+  function successHandler(results) {
+    deferred.resolve(results);
+  }
+
+  function errorHandler(error) {
+    deferred.reject(error);
+  }
+
+  exec(successHandler,
+      errorHandler,
+      'CloudantSync',
+      'returnResolvedDocument',
+      [documentRevision, resolverId]);
+
+  deferred.promise.nodeify(callback);
+  return deferred.promise;
+};
+
 // Internal Functions
+
+/**
+ * @private
+ * @summary Checks the given 'dbName' is defined and is a string.
+ * @param {type} dbName - the value to check
+ * @throws {Error} if the given 'dbName' is undefined or not a String.
+ */
+function validateDbName(dbName) {
+  if (_.isEmpty(dbName)) {
+    throw new Error('dbName must exist');
+  }
+
+  if (!_.isString(dbName)) {
+    throw new Error('dbName must be a String');
+  }
+}
+
+/**
+ * @private
+ * @summary Checks various attributes of the given 'documentRevision' to ensure
+ * it appears to be a valid document revision.
+ * @param {type} documentRevision - the 'documentRevision' to check.
+ * @throws {Error} containing details of the problem if the validity checks
+ * fail.
+ */
+function validateDocumentRevision(documentRevision) {
+  if (!documentRevision) {
+    throw new Error('documentRevision must exist');
+  }
+
+  if (!_.isObject(documentRevision) ||
+   _.isArray(documentRevision) ||
+   _.isFunction(documentRevision)) {
+    throw new Error('documentRevision must be an Object');
+  }
+
+  var docId = documentRevision._id || null;
+  var rev = documentRevision._rev || null;
+
+  if (rev && !docId) {
+    throw new Error('\'_id\' is required if \'_rev\' is specified.');
+  }
+
+  if (documentRevision._attachments) {
+    var attachments = documentRevision._attachments;
+    if (_.isEmpty(attachments)) {
+      throw new Error(
+          'documentRevision contained invalid attachments.  _attachments' +
+          ' had no body'
+      );
+    }
+
+    for (var attachmentName in attachments) {
+      var attachment = attachments[attachmentName];
+      if (_.isEmpty(attachment)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no body');
+      }
+
+      if (_.isEmpty(attachment.data)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no data');
+      }
+
+      if (_.isEmpty(attachment.contentType)) {
+        throw new Error(
+            'documentRevision contained invalid attachment.  ' +
+            attachmentName + ' had no content_type');
+      }
+    }
+  }
+}
+
+/**
+ * @private
+ * @summary Checks the given 'documentId' is defined and is a string.
+ * @param {type} documentId - the value to check
+ * @throws {Error} if the given 'documentId' is undefined or not a String.
+ */
+function validateDocumentId(documentId) {
+  if (_.isEmpty(documentId)) {
+    throw new Error('documentId must exist');
+  }
+
+  if (!_.isString(documentId)) {
+    throw new Error('documentId must be a String');
+  }
+}
 
 /**
  * Creates or updates a document in the Datastore.
@@ -709,5 +837,31 @@ function createOrUpdateDocumentFromRevision(args) {
 
 /**
  * @callback Datastore~closeCallback
+ * @param {?Error} error
+ */
+
+/**
+ * @callback Datastore~getConflictedDocumentIdsCallback
+ * @param {?Error} error
+ * @param {Array} docIds - All document IDs in the datastore that have conflicts
+ * in their revision tree.
+ */
+
+/**
+ * @callback Datastore~resolveConflictsCallback
+ * @param {String} docId - the ID of the Document with conflicts.
+ * @param {Array} documentRevisions - array of conflicted document revisions,
+ * including the current winner.
+ * @returns {Object} the new winning document revision, or `nil` if the document
+ * should be left as it currently is (i.e., leave the database unchanged).
+ */
+
+/**
+ * @callback Datastore~resolveConflictsForDocumentCallback
+ * @param {?Error} error
+ */
+
+/**
+ * @callback Datastore~returnResolvedDocumentCallback
  * @param {?Error} error
  */

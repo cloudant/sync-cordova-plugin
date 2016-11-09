@@ -26,28 +26,30 @@
     <dependency id="cordova-plugin-test-framework"/>
     <dependency id="cloudant-sync" />
     <dependency id="cordova-plugin-device" />
+    <js-module name="RemoteDbUtils" src="RemoteDbUtils.js"/>
     <js-module name="DBCreateTests" src="DBCreateTests.js"/>
     <js-module name="AttachmentsTests" src="AttachmentsTests.js"/>
     <js-module name="CRUDTests" src="CRUDTests.js"/>
     <js-module name="IndexAndQueryTests" src="IndexAndQueryTests.js"/>
     <js-module name="ReplicationTests" src="ReplicationTests.js"/>
     <js-module name="DatastoreTests" src="DatastoreTests.js"/>
+    <js-module name="ConflictTests" src="ConflictTests.js"/>
     <js-module name="tests" src="Tests.js" />
 
     <platform name="android">
         <js-module src="android/TestUtil.js" name="TestUtil" />
-         <lib-file src="libs/sqlcipher.jar"/>
-         <resource-file src="libs/armeabi/libdatabase_sqlcipher.so" target="libs/armeabi/libdatabase_sqlcipher.so"/>
-         <resource-file src="libs/armeabi/libsqlcipher_android.so" target="libs/armeabi/libsqlcipher_android.so"/>
-         <resource-file src="libs/armeabi/libstlport_shared.so" target="libs/armeabi/libstlport_shared.so"/>
+        <lib-file src="libs/sqlcipher.jar"/>
+        <resource-file src="libs/armeabi/libdatabase_sqlcipher.so" target="libs/armeabi/libdatabase_sqlcipher.so"/>
+        <resource-file src="libs/armeabi/libsqlcipher_android.so" target="libs/armeabi/libsqlcipher_android.so"/>
+        <resource-file src="libs/armeabi/libstlport_shared.so" target="libs/armeabi/libstlport_shared.so"/>
 
-         <resource-file src="libs/armeabi-v7a/libdatabase_sqlcipher.so" target="libs/armeabi-v7a/libdatabase_sqlcipher.so"/>
-         <resource-file src="libs/armeabi-v7a/libsqlcipher_android.so" target="libs/armeabi-v7a/libsqlcipher_android.so"/>
-         <resource-file src="libs/armeabi-v7a/libstlport_shared.so" target="libs/armeabi-v7a/libstlport_shared.so"/>
+        <resource-file src="libs/armeabi-v7a/libdatabase_sqlcipher.so" target="libs/armeabi-v7a/libdatabase_sqlcipher.so"/>
+        <resource-file src="libs/armeabi-v7a/libsqlcipher_android.so" target="libs/armeabi-v7a/libsqlcipher_android.so"/>
+        <resource-file src="libs/armeabi-v7a/libstlport_shared.so" target="libs/armeabi-v7a/libstlport_shared.so"/>
 
-         <resource-file src="libs/x86/libdatabase_sqlcipher.so" target="libs/x86/libdatabase_sqlcipher.so"/>
-         <resource-file src="libs/x86/libsqlcipher_android.so"  target="libs/x86/libsqlcipher_android.so"/>
-         <resource-file src="libs/x86/libstlport_shared.so" target="libs/x86/libstlport_shared.so"/>
+        <resource-file src="libs/x86/libdatabase_sqlcipher.so" target="libs/x86/libdatabase_sqlcipher.so"/>
+        <resource-file src="libs/x86/libsqlcipher_android.so"  target="libs/x86/libsqlcipher_android.so"/>
+        <resource-file src="libs/x86/libstlport_shared.so" target="libs/x86/libstlport_shared.so"/>
 
         <resource-file src="assets/icudt46l.zip" target="assets/icudt46l.zip" />
 

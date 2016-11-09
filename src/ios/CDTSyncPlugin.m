@@ -38,6 +38,81 @@
 #define kCDTQuerySkip       @"skip"
 
 
+@interface ConflictResolverWrapper  : NSObject<CDTConflictResolver>
+@property (strong, readonly) NSString* callbackId;
+@property (nonatomic, weak) id <CDVCommandDelegate> commandDelegate;
+@property (nonatomic, strong) dispatch_semaphore_t semaphore;
+@property CDTDocumentRevision* documentRevision;
+
+-(instancetype) initWithCallbackId:(NSString *)callbackId delegate:(id<CDVCommandDelegate>)commandDelegate;
+-(void) setRevision:(CDTDocumentRevision*)revision;
+@end
+
+@implementation ConflictResolverWrapper
+
+-(instancetype) initWithCallbackId:(NSString *)callbackId delegate:(id<CDVCommandDelegate>)commandDelegate
+{
+    self = [super init];
+    if (self) {
+        _callbackId = callbackId;
+        _commandDelegate = commandDelegate;
+        _semaphore = dispatch_semaphore_create(0);
+    }
+    return self;
+}
+
+-(void) setRevision:(CDTDocumentRevision*)revision
+{
+    self.documentRevision = revision;
+    dispatch_semaphore_signal(self.semaphore);
+}
+
+-(CDTDocumentRevision *)resolve:(NSString*)docId
+                      conflicts:(NSArray*)conflicts
+{
+    NSMutableArray *conflictingDocs = [NSMutableArray array];
+    [conflicts enumerateObjectsUsingBlock:^(CDTDocumentRevision *rev, NSUInteger idx, BOOL *stop) {
+        NSError *jsonConvertError = nil;
+        [conflictingDocs addObject:[CDTSyncPlugin convertDocumentToJSON:rev error:&jsonConvertError]];
+        if(jsonConvertError){
+            NSLog(@"Conversion error for revision %@ with docId %@.  Error: %@",rev.revId, rev.docId, jsonConvertError);
+        }
+    }];
+
+    NSMutableDictionary *intermediateResult = [NSMutableDictionary dictionary];
+    [intermediateResult setValue:docId forKey:@"docId"];
+    [intermediateResult setValue:conflictingDocs forKey:@"conflicts"];
+    [intermediateResult setValue:self.callbackId forKey:@"resolverId"];
+
+    // Send the conflicts back to the javascript so that the conflicts can be resolved in the javascript
+    // callback. Keep the callback alive so we can also notify the caller of the end of conflict resolution.
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:intermediateResult];
+    [pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+
+    // Wait (for a maximum of 5 minutes) for the javascript to call us back.
+    dispatch_time_t timeout = dispatch_walltime(DISPATCH_TIME_NOW, 5 * 60 * NSEC_PER_SEC);
+
+    if (dispatch_semaphore_wait(self.semaphore, timeout) == 0) {
+        // Update the document with the conflict resolution from the javascript.
+        for (CDTDocumentRevision *docRev in conflicts) {
+            if ([docRev.revId isEqualToString:self.documentRevision.revId]) {
+                docRev.body = self.documentRevision.body;
+                docRev.attachments = self.documentRevision.attachments;
+                return docRev;
+            }
+        }
+
+        NSLog(@"Unable to find revision matching %@ in conflicts for: %@ ", self.documentRevision.revId, docId);
+        return self.documentRevision;
+
+    } else {
+        NSLog(@"Javascript conflict resolver did not return a document revision before timeout for %@", docId);
+        return nil;
+    }
+}
+@end
+
 @interface CDTDatastore (Manager)
 // This property exists on the datastore, it is only declared in the implementation
 // however thus we need this exention.
@@ -45,16 +120,18 @@
 @end
 
 @implementation CDTDatastore (Manager)
+@dynamic manager;
 @end
 
 
 @interface CDTSyncPlugin ()
 
-@property NSMutableDictionary *datastoreMap;
-@property NSMutableDictionary *replicatorMap;
-@property NSMutableDictionary *delegateMap;
-@property NSMutableDictionary *interceptorMap;
-@property NSMutableDictionary<NSNumber*,CDTDatastoreManager*> *datastoreManagers;
+@property NSMutableDictionary<NSString*, CDTDatastore*> *datastoreMap;
+@property NSMutableDictionary<NSNumber*, CDTReplicator*> *replicatorMap;
+@property NSMutableDictionary<NSNumber*, CDTSyncPluginDelegate*> *delegateMap;
+@property NSMutableDictionary<NSNumber*, CDTSyncPluginInterceptor*> *interceptorMap;
+@property NSMutableDictionary<NSNumber*, CDTDatastoreManager*> *datastoreManagers;
+@property NSMutableDictionary<NSString*, ConflictResolverWrapper*> *resolverMap;
 
 @end
 
@@ -67,6 +144,7 @@
     self.delegateMap = [NSMutableDictionary dictionary];
     self.interceptorMap = [NSMutableDictionary dictionary];
     self.datastoreManagers = [NSMutableDictionary dictionary];
+    self.resolverMap = [NSMutableDictionary dictionary];
 }
 
 - (void)createDatastoreManager:(CDVInvokedUrlCommand*)command
@@ -91,7 +169,6 @@
 
     }];
 }
-
 
 #pragma mark - Database Create/Delete
 - (void)openDatastore:(CDVInvokedUrlCommand*)command
@@ -178,7 +255,7 @@
         CDTDatastore *cachedStore = self.datastoreMap[name];
         if(cachedStore){
             NSError *jsonConversionError = nil;
-            CDTDocumentRevision *revision = [self convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
+            CDTDocumentRevision *revision = [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
             if(!jsonConversionError){
                 // perform save
                 CDTDocumentRevision *savedRevision = nil;
@@ -191,7 +268,7 @@
                 }
 
                 if(!error){
-                    NSDictionary *resultJSON = [self convertDocumentToJSON:savedRevision error:&jsonConversionError];
+                    NSDictionary *resultJSON = [CDTSyncPlugin convertDocumentToJSON:savedRevision error:&jsonConversionError];
                     if(!jsonConversionError){
                         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:resultJSON];
                     }else{
@@ -239,7 +316,7 @@
             CDTDocumentRevision *fetchedRevision = [cachedStore getDocumentWithId:docId error:&error];
             if(!error){
                 NSError *jsonConversionError = nil;
-                NSDictionary *result = [self convertDocumentToJSON:fetchedRevision error:&jsonConversionError];
+                NSDictionary *result = [CDTSyncPlugin convertDocumentToJSON:fetchedRevision error:&jsonConversionError];
                 if(!jsonConversionError){
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
                 }else{
@@ -276,7 +353,7 @@
         CDTDatastore *cachedStore = self.datastoreMap[name];
         if(cachedStore){
             NSError *jsonConversionError = nil;
-            CDTDocumentRevision *revisionToDelete = [self convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
+            CDTDocumentRevision *revisionToDelete = [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError];
 
 
             if(!jsonConversionError){
@@ -285,7 +362,7 @@
 
                 // perform delete
                 if(!error){
-                    NSDictionary *result = [self convertDocumentToJSON:deletedRevision error:&jsonConversionError];
+                    NSDictionary *result = [CDTSyncPlugin convertDocumentToJSON:deletedRevision error:&jsonConversionError];
                     if(!jsonConversionError){
                         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
                     }else{
@@ -390,13 +467,12 @@
             NSNumber *skip = cloudantQueryDictionary[kCDTQuerySkip];
 
             NSMutableArray *jsonObjects = [NSMutableArray array];
-            __block NSError *jsonConvertError = nil;
             CDTQResultSet *result = [cachedStore find:selector skip:[skip integerValue] limit:[limit integerValue] fields:nil sort:sortDescriptors];
             [result enumerateObjectsUsingBlock:^(CDTDocumentRevision *rev, NSUInteger idx, BOOL *stop) {
-                [jsonObjects addObject:[self convertDocumentToJSON:rev error:&jsonConvertError]];
+                NSError *jsonConvertError = nil;
+                [jsonObjects addObject:[CDTSyncPlugin convertDocumentToJSON:rev error:&jsonConvertError]];
                 if(jsonConvertError){
                     NSLog(@"Conversion error for revision with docId %@.  Error: %@",rev.docId, jsonConvertError);
-                    jsonConvertError = nil;
                 }
             }];
 
@@ -457,7 +533,7 @@
             CDTReplicatorFactory *replicatorFactory = [[CDTReplicatorFactory alloc] initWithDatastoreManager: localstore.manager];
             replicator = [replicatorFactory oneWay:push error:&error];
             if (replicator){
-                [self.replicatorMap setObject:replicator forKey:[token stringValue]];
+                [self.replicatorMap setObject:replicator forKey:token];
             }
         } else {
             // Error
@@ -477,9 +553,10 @@
             if (replicator) {
                 CDTSyncPluginDelegate *delegate = [[CDTSyncPluginDelegate alloc] initWithCommandDelegate:self.commandDelegate callbackId:command.callbackId];
                 // Must cache delegate for strong reference
-                self.delegateMap[[token stringValue]] = delegate;
-                self.replicatorMap[[token stringValue]] = replicator;
-                self.interceptorMap[[token stringValue]] = interceptor;
+                self.delegateMap[token] = delegate;
+                self.replicatorMap[token] = replicator;
+                NSLog(@"Adding interceptor with token: %@", token);
+                self.interceptorMap[token] = interceptor;
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 [pluginResult setKeepCallbackAsBool:YES];
             } else {
@@ -501,10 +578,10 @@
         NSNumber *token = [replicatorJSON valueForKey:@"token"];
         CDVPluginResult *pluginResult;
 
-        CDTReplicator *replicator = [self.replicatorMap objectForKey:[token stringValue]];
+        CDTReplicator *replicator = [self.replicatorMap objectForKey:token];
         if (replicator){
-            [self.delegateMap removeObjectForKey:[token stringValue]];
-            [self.replicatorMap removeObjectForKey:[token stringValue]];
+            [self.delegateMap removeObjectForKey:token];
+            [self.replicatorMap removeObjectForKey:token];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         } else {
             NSString *message = [NSString stringWithFormat:NSLocalizedString(@"Replicator with token %@ already destroyed", token)];
@@ -524,9 +601,9 @@
         NSError *error = nil;
         CDVPluginResult *pluginResult;
 
-        CDTReplicator *replicator = [self.replicatorMap objectForKey:[token stringValue]];
+        CDTReplicator *replicator = [self.replicatorMap objectForKey:token];
         if (replicator){
-            replicator.delegate = self.delegateMap[[token stringValue]];
+            replicator.delegate = self.delegateMap[token];
             [replicator startWithError:&error];
             if (error){
                 // Error occurred, create response
@@ -552,7 +629,7 @@
     NSNumber *token = [replicator valueForKey:@"token"];
     CDVPluginResult *pluginResult = nil;
 
-    CDTReplicator * rep = [self.replicatorMap objectForKey:[token stringValue]];
+    CDTReplicator * rep = [self.replicatorMap objectForKey:token];
     if (rep){
         CDTReplicatorState state = rep.state;
         NSString * message = [self replicatorStateToString:state];
@@ -568,7 +645,7 @@
     NSNumber *token = [replicator valueForKey:@"token"];
     CDVPluginResult *pluginResult = nil;
 
-    CDTReplicator * rep = [self.replicatorMap objectForKey:[token stringValue]];
+    CDTReplicator * rep = [self.replicatorMap objectForKey:token];
 
     if (rep){
         // Android has no boolean return on stop(), so we will mirror Android here to be consistent in hybrid
@@ -618,7 +695,7 @@
 
     [self.commandDelegate runInBackground:^{
 
-        CDTSyncPluginInterceptor *interceptor = self.interceptorMap[[token stringValue]];
+        CDTSyncPluginInterceptor *interceptor = self.interceptorMap[token];
         if(!interceptor){
             // Error occurred, create response
             NSString *message = [NSString stringWithFormat:NSLocalizedString(@"Cannot unlock interceptor with token %@.  Does not exist", nil), token];
@@ -639,9 +716,89 @@
     }];
 }
 
-#pragma mark - JSON to Document Helpers
--(CDTDocumentRevision*) convertJSONToDocument: (NSDictionary*)json error: (NSError**) error
+- (void)getConflictedDocumentIds:(CDVInvokedUrlCommand*)command
 {
+    [self.commandDelegate runInBackground:^{
+        CDVPluginResult* pluginResult = nil;
+        NSString *name = [command argumentAtIndex:0];
+
+        // Lookup store in cache
+        CDTDatastore *cachedStore = self.datastoreMap[name];
+        if(cachedStore){
+            NSArray *docIds = [cachedStore getConflictedDocumentIds];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:docIds];
+        } else {
+            // No cached store was found.  error
+            NSString *message = [NSString stringWithFormat: NSLocalizedString(@"Query error: the store named %@ must first be created", nil), name];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
+}
+
+- (void)resolveConflictsForDocument:(CDVInvokedUrlCommand*)command
+{
+    [self.commandDelegate runInBackground:^{
+        CDVPluginResult* pluginResult = nil;
+        NSString *name = [command argumentAtIndex:0];
+        NSString *documentId = [command argumentAtIndex:1];
+
+        // Lookup store in cache
+        CDTDatastore *cachedStore = self.datastoreMap[name];
+        if(cachedStore){
+            NSError *error;
+
+            ConflictResolverWrapper *conflictResolver = [[ConflictResolverWrapper alloc] initWithCallbackId:command.callbackId delegate:self.commandDelegate];
+
+            // Store the conflictResolver in a map indexed by a unique ID that can be passed around
+            // to retrieve the conflictResolver from other callbacks. The callbackId is unique
+            // to each invocation of this method so we'll use that.
+            self.resolverMap[command.callbackId] = conflictResolver;
+            [cachedStore resolveConflictsForDocument:documentId
+                                            resolver:conflictResolver
+                                               error:&error];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        } else {
+            // No cached store was found.  error
+            NSString *message = [NSString stringWithFormat: NSLocalizedString(@"Query error: the store named %@ must first be created", nil), name];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
+}
+
+- (void)returnResolvedDocument:(CDVInvokedUrlCommand*)command
+{
+    [self.commandDelegate runInBackground:^{
+        CDVPluginResult* pluginResult = nil;
+        NSDictionary *docRevisionJSON = [command argumentAtIndex:0];
+        NSString *resolverId = [command argumentAtIndex:1];
+
+        NSError *jsonConversionError = nil;
+        CDTDocumentRevision *revision = docRevisionJSON ? [CDTSyncPlugin convertJSONToDocument:docRevisionJSON error:&jsonConversionError] : nil;
+        if(!jsonConversionError){
+            ConflictResolverWrapper *conflictResolver = self.resolverMap[resolverId];
+            [self.resolverMap removeObjectForKey:resolverId];
+            [conflictResolver setRevision:revision];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        }else{
+            // Error occurred, create response
+            NSString *errorMessage = [NSString stringWithFormat:NSLocalizedString(@"Document error:%@", nil), jsonConversionError];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString: errorMessage];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
+}
+
+#pragma mark - JSON to Document Helpers
++(CDTDocumentRevision*) convertJSONToDocument: (NSDictionary*)json error: (NSError**) error
+{
+    if (!json) {
+        NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+        userInfo[NSLocalizedDescriptionKey] = NSLocalizedString(@"No json specified", nil);
+        *error = [NSError errorWithDomain:@"CDTSyncPlugin" code:43 userInfo:userInfo];
+        return nil;
+    }
     NSString *documentId = json[kCDTDocId];
     NSString *revision = json[kCDTDocRev];
     NSString *deletedString = json[kCDTDocDeleted];
@@ -693,7 +850,7 @@
     return documentRevision;
 }
 
--(NSDictionary*) convertDocumentToJSON: (CDTDocumentRevision*)document error: (NSError**) error
++(NSDictionary*) convertDocumentToJSON: (CDTDocumentRevision*)document error: (NSError**) error
 {
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     result[kCDTDocId] = document.docId;
@@ -724,7 +881,7 @@
     return result;
 }
 
--(BOOL) isValidJSONType: (id) value
++(BOOL) isValidJSONType: (id) value
 {
     return [value isKindOfClass:[NSString class]] || [value isKindOfClass: [NSNumber class]] || [value isKindOfClass:[NSNull class]];
 }
