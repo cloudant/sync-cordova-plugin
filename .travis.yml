@@ -4,6 +4,7 @@ matrix:
     include:
         - os: linux
           language: android
+          sudo: required
           android:
             components:
               # Uncomment the lines below if you want to
@@ -12,10 +13,10 @@ matrix:
               - tools
 
               # The BuildTools version used by your project
-              - build-tools-19.1.0
+              - build-tools-25.0.0
 
               # The SDK version used to compile your project
-              - android-23
+              - android-25
 
               # Additional components
               - extra-google-m2repository
@@ -23,9 +24,10 @@ matrix:
 
               # Specify at least one system image,
               # if you need to run emulator(s) during your tests
-              - sys-img-x86-android-21
-              - sys-img-armeabi-v7a-android-21
+              - sys-img-x86-android-24
+              - sys-img-armeabi-v7a-android-24
           script:
+            - echo y | android update sdk -u --filter android-24
             # Launch Android emulator
             #- echo no | android create avd --force -n test -t android-21 --abi x86
             - echo no | android create avd --force -n test -t android-21 --abi armeabi-v7a
@@ -49,8 +51,12 @@ before_script:
     - npm update -g npm
     # Run setup to replicate animaldb
     - ./setup.rb
+    - nvm install 6
     - npm install
 
 after_script:
     # for now only check javascript production source files follow guidelines.
     - npm run lint
+
+before_install:
+    - jdk_switcher use oraclejdk8
