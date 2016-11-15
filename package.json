@@ -44,7 +44,7 @@
     "q": "~1.4.1"
   },
   "devDependencies": {
-    "cordova": "6.3.1",
+    "cordova": "latest",
     "cordova-paramedic": "latest",
     "jscs": "latest"
   },
