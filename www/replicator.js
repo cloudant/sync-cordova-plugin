@@ -2,16 +2,16 @@
  * Copyright (c) 2016 IBM Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND,either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  */
 
@@ -29,48 +29,15 @@ module.exports = Replicator;
  * @classdesc The {@link Replicator} prototype is a common interface for
  * managing pull/push replication between a {@link Datastore} and a remote
  * Cloudant or CouchDB database.
- * @property {Number} token - A token unique to each {@link Replicator} object.
- * (readonly)
- * @property {String} type - The type of replication to be performed. Either
- * 'push' or 'pull'. (readonly)
- * @property {Datastore} datastore - The {@link Datastore} to replicate to/from.
- * (readonly)
- * @property {String} uri - The remote Cloudant or CouchDB database uri.
- * (readonly)
- * @property {Object} handlers - Replication event handlers
- * @property {Array} handlers.complete - The list of handlers to execute when
- * replication completes.
- * @property {Array} handlers.error - The list of handlers to execute when
- * replication errors.
- * @property {Object} interceptors - Replication HTTP interceptors (readonly)
- * @property {Array} interceptors.request - The list of handlers to execute when
- * an HTTP request is made by this replicator
- * @property {Object} interceptors.response - A map of HTTP status codes and the
- * handlers to execute when recieved by this replicator
- *
- * @description <strong>Should not be called by user; Use
- * {@link ReplicatorFactory#pullReplicator} or
- * {@link ReplicatorFactory#pushReplicator} to get {@link Replicator}
- * objects</strong>
  */
-function Replicator(type,
-    datastore,
-    uri,
-    requestInterceptors,
-    responseInterceptors,
-    deferred) {
-  if (_.isEmpty(type) || !_.isString(type)) {
-    throw new Error('Replication type \'push\' or \'pull\' must be specified');
-  }
+function Replicator() {};
 
-  if (!isDatastore(datastore)) {
-    throw new Error('A valid datastore object must be set');
-  }
-
-  if (_.isEmpty(uri) || !_.isString(uri)) {
-    throw new Error('A valid uri must be set');
-  }
-
+/**
+ * @summary Internal function to create replicator.
+ * @property {Number} token - A token unique to each
+ * {@link Replicator} object. (readonly)
+ */
+function Replicator(options, deferred) {
 
   var token = utils.generateToken();
   var handlers = {};
@@ -82,19 +49,19 @@ function Replicator(type,
     configurable: false,
   });
   utils.defineProperty(this, 'type', {
-    value: type,
+    value: options.type,
     writable: false,
     enumerable: true,
     configurable: false,
   });
   utils.defineProperty(this, 'datastore', {
-    value: datastore,
+    value: options.datastore,
     writable: false,
     enumerable: true,
     configurable: false,
   });
   utils.defineProperty(this, 'uri', {
-    value: uri,
+    value: options.uri,
     writable: false,
     enumerable: true,
     configurable: false,
@@ -119,29 +86,27 @@ function Replicator(type,
     configurable: false,
   });
 
-  var interceptors = {};
-  utils.defineProperty(interceptors, 'request', {
-    value: requestInterceptors || [],
+  // Add request interceptors if they exist or add an empty array
+  var requestInterceptors = new Interceptors([options.requestInterceptors]);
+  utils.defineProperty(this, 'request', {
+    value: requestInterceptors,
     writable: false,
-    enumerable: true,
-    configurable: false,
-  });
-  utils.defineProperty(interceptors, 'response', {
-    value: responseInterceptors || [],
-    writable: false,
-    enumerable: true,
-    configurable: false,
-  });
-  utils.defineProperty(interceptors, 'timeout', {
-    value: 290000,
-    writable: true,
     enumerable: true,
     configurable: false,
   });
 
-  utils.defineProperty(this, 'interceptors', {
-    value: interceptors,
+  // Add response interceptors if they exist or add an empty array
+  var responseInterceptors = new Interceptors([options.responseInterceptors]);
+  utils.defineProperty(this, 'response', {
+    value: responseInterceptors,
     writable: false,
+    enumerable: true,
+    configurable: false,
+  });
+
+  utils.defineProperty(this, 'interceptorTimeout', {
+    value: 290000,
+    writable: true,
     enumerable: true,
     configurable: false,
   });
@@ -168,7 +133,122 @@ function Replicator(type,
       'CloudantSync',
       'createReplicator',
       [this]);
-}
+};
+
+/**
+ * @summary Common function for adding interceptors to the list of
+ * handlers.
+ * @param {(...HttpInterceptor|HttpInterceptor[])} optionInterceptors
+ * The interceptors to add. Interceptors are executed in a pipeline and
+ * modify the connection context in a serial fashion.
+ * @returns Array of interceptors or an empty array
+ */
+function Interceptors(optionInterceptors) {
+  var interceptors = [];
+  if (optionInterceptors.length > 0
+    && typeof optionInterceptors[0] != 'undefined') {
+    // Convert interceptors to Array.
+    // Never call Array.prototype.slice on arguments
+    // as it prevents optimizations
+    var args = [];
+    for (var i = 0; i < optionInterceptors.length; i++) {
+      args.push(optionInterceptors[i]);
+    }
+
+    interceptors = _.isArray(args[0]) ? args[0] : args;
+    interceptors.forEach(function(interceptor, index) {
+      if (!_.isFunction(interceptor)) {
+        throw new Error('Request or response interceptor at index '
+          + index + ' must be a function');
+      }
+    });
+  }
+  return interceptors;
+};
+
+/**
+ * @summary Create a pull or push replicator based on the source and
+ * target parameters.
+ * @example
+ * // Options object containing the source and target for push replication
+ * var pushReplicatorOptions = {
+ *   source: datastore,
+ *   target: uri
+ * }
+ *
+ * // Create a replicator that replicates changes from the local
+ * // Datastore to the remote database.
+ * var replicator = Replicator.create(pushReplicatorOptions);
+ *
+ * // Start replicator using {@link Replicator#start}
+ * replicator.start(function(error) {
+ *   ...
+ *   done();
+ * }
+ *
+ * // Destroy replicator when finished with the object
+ * replicator.destroy();
+ *
+ * @param options JSON object containing options for building replicator.
+ * See options below:
+ * @property {Datastore} options.datastore - The {@link Datastore} to
+ * replicate to/from. (readonly)
+ * @property {String} options.uri - The remote Cloudant or CouchDB database uri.
+ * (readonly)
+ * @property {Object} handlers - Replication event handlers
+ * @property {Array} handlers.complete - The list of handlers to execute when
+ * replication completes.
+ * @property {Array} handlers.error - The list of handlers to execute when
+ * replication errors.
+ * @property {Array} options.requestInterceptors - The list of handlers
+ * to execute when an HTTP request is made by this replicator
+ * @property {Object} options.responseInterceptors - A map of HTTP status
+ * codes and the handlers to execute when received by this replicator
+ *
+ * @param {Replicator~createCallback} [callback] - The function to call
+ * after attempting to create the {@link Replicator}.
+ *
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
+ * either the created {@link Replicator} or an Error.
+*/
+Replicator.create = function(options, callback) {
+
+  var datastore, uri;
+  var deferred = Q.defer();
+
+  if (!options.hasOwnProperty('source') || _.isEmpty(options.source)) {
+    throw new Error('Replication source must be set');
+
+  } else if (isDatastore(options.source)) {
+    // Check that the source is a datastore and target is a valid URI string
+
+    if (!_.isString(options.target)) {
+      throw new Error('push replication target uri must be a String');
+    }
+    options.type = 'push';
+    options.datastore = options.source;
+    options.uri = options.target;
+
+  } else if (_.isString(options.source)) {
+    // Check that the source is a valid URI string and target is a datastore
+
+    if (!isDatastore(options.target)) {
+      throw new Error('pull replication target must be a valid Datastore');
+    }
+    options.type = 'pull';
+    options.datastore = options.target;
+    options.uri = options.source;
+
+  } else {
+    throw new Error('Replication source must be either a Datastore object or '
+      + 'or a URI. ' + 'Found: ' + options.source.toString());
+  }
+
+  new Replicator(options, deferred);
+
+  deferred.promise.nodeify(callback);
+  return deferred.promise;
+};
 
 /**
  * @summary Starts a replication.
@@ -184,6 +264,7 @@ function Replicator(type,
  */
 Replicator.prototype.start = function(callback) {
   var deferred = Q.defer();
+
 
   function successHandler() {
     deferred.resolve();
@@ -208,11 +289,11 @@ Replicator.prototype.start = function(callback) {
  * @description Possible states: ['Pending', 'Started', 'Stopping', 'Error',
  * 'Stopped', 'Complete']
  *
- * @param {Replicator~getStateCallback} [callback] - The function to call after
- * attempting to get replication state.
+ * @param {Replicator~getStateCallback} [callback] - The function to call
+ * after attempting to get replication state.
  *
- * @returns A [q style promise]{@link https://github.com/kriskowal/q} returning
- * either the current replication state or an Error.
+ * @returns A [q style promise]{@link https://github.com/kriskowal/q}
+ * returning either the current replication state or an Error.
  */
 Replicator.prototype.getState = function(callback) {
   var deferred = Q.defer();
@@ -238,8 +319,8 @@ Replicator.prototype.getState = function(callback) {
 /**
  * @summary Stops replication
  *
- * @param {Replicator~getStateCallback} [callback] - The function to call after
- * attempting to stop replication.
+ * @param {Replicator~getStateCallback} [callback] - The function to call
+ * after attempting to stop replication.
  *
  * @returns A [q style promise]{@link https://github.com/kriskowal/q} which
  * returns successfully or with Error.
@@ -255,7 +336,12 @@ Replicator.prototype.stop = function(callback) {
     deferred.reject(error);
   }
 
-  exec(successHandler, errorHandler, 'CloudantSync', 'stopReplication', [this]);
+  exec(successHandler,
+    errorHandler,
+    'CloudantSync',
+    'stopReplication',
+    [this]
+    );
 
   deferred.promise.nodeify(callback);
   return deferred.promise;
@@ -271,8 +357,8 @@ Replicator.prototype.stop = function(callback) {
  * connection.
  *
  * @param {String} event - The event type. Either 'complete' or 'error'.
- * @param {Replicator~onCompleteHandler|Replicator~onErrorHandler} handler - The
- * handler to register.
+ * @param {Replicator~onCompleteHandler|Replicator~onErrorHandler}
+ * handler - The handler to register.
  */
 Replicator.prototype.on = function(event, handler) {
   if (this.handlers.hasOwnProperty(event)) {
@@ -352,12 +438,11 @@ function emit(replicator, event, args) {
     for (var i = 0; i < replicator.handlers[event].length; i++) {
       replicator.handlers[event][i].apply(undefined, args);
     }
-  } else if (replicator.interceptors.hasOwnProperty(event)) {
+  } else if (replicator.hasOwnProperty(event)) {
     var promises = [];
-
-    // Wrap each interceptor in a promise producing function
-    for (var j = 0; j < replicator.interceptors[event].length; j++) {
-      promises.push(promiseWrap(replicator.interceptors[event][j]));
+    // Wrap request interceptor in a promise producing function
+    for (var j = 0; j < replicator[event].length; j++) {
+      promises.push(promiseWrap(replicator[event][j]));
     }
 
     var request = args[0];
@@ -367,7 +452,7 @@ function emit(replicator, event, args) {
     var httpInterceptorContext = new HttpInterceptorContext(request,
         response,
         retry);
-    var timeout = replicator.interceptors.timeout || 290000;
+    var timeout = replicator.interceptorTimeout || 290000;
     var timeoutMessage = event + ' interceptors for replicator with token ' +
     replicator.token + ' timed out after ' + timeout +
     'ms. Ensure HttpInterceptorContext#done() is called to end each' +
@@ -440,3 +525,49 @@ function promiseWrap(interceptor) {
     return deferred.promise;
   };
 }
+
+// Callback TypeDefs
+
+
+/**
+ * @callback Replicator~createCallback
+ * @param {?Error} error
+ * @param {Replicator} replicator - The Replicator object.
+ */
+
+/**
+ * @typedef {Function} HttpInterceptor
+ * @param {HttpInterceptorContext} httpInterceptorContext - The HTTP request and
+ * response context
+ */
+
+/**
+ * @callback Replicator~startCallback
+ * @param {?Error} error
+ */
+
+/**
+ * @callback Replicator~getStateCallback
+ * @param {?Error} error
+ * @param {String} state - The current replication state.
+ */
+
+/**
+ * @callback Replicator~stopCallback
+ * @param {?Error} error
+ */
+
+/**
+ * @callback Replicator~onCompleteHandler
+ * @param {Number} numDocs - The number of documents replicated.
+ */
+
+/**
+ * @callback Replicator~onErrorHandler
+ * @param {String} message - The replication error message.
+ */
+
+/**
+ * @callback Replicator~destroyCallback
+ * @param {?Error} error
+ */
