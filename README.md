@@ -25,11 +25,6 @@ libraries.
 [ios]: https://github.com/cloudant/CDTDatastore
 [android]: https://github.com/cloudant/sync-android
 
-If you have questions, please join our [mailing list][mlist] and drop us a
-line.
-
-[mlist]: https://groups.google.com/forum/#!forum/cloudant-sync
-
 ## Supported Platforms
 
 * Android
@@ -39,9 +34,20 @@ line.
 
 Add this plugin to your project via the Cordova CLI.
 
-```console
-$ cordova plugin add cloudant-sync
-```
+<pre>
+$ cordova plugin add https://github.com/cloudant/sync-cordova-plugin#<b><i>VERSION</i></b>
+</pre>
+
+where **_`VERSION`_** should be replaced by a released version of the
+sync-cordova-plugin, e.g.:
+
+<pre>
+$ cordova plugin add https://github.com/cloudant/sync-cordova-plugin#0.3.0
+</pre>
+
+Note that you should always specify a [released version](https://github.com/cloudant/sync-cordova-plugin/releases). Failure to do so would
+mean you may be working with an unreleased version of the plugin that may not
+be stable.
 
 ### Adding Platforms
 
@@ -115,7 +121,7 @@ datastore.getDocument(updated._id)
     }).done();
 ```
 
-Read more in [the CRUD document](plugin/doc/crud.md).
+Read more in [the CRUD document](doc/crud.md).
 
 ### Replicating Data Between Many Devices
 
@@ -144,7 +150,7 @@ Replicator.create(pullReplicatorOptions).then(function (replicator) {
 }).done();
 ```
 
-Read more in [the replication docs](plugin/doc/replication.md).
+Read more in [the replication docs](doc/replication.md).
 
 ### Finding data
 
@@ -168,7 +174,7 @@ datastore.find(query)
     }).done();
 ```
 
-See [Index and Querying Data](plugin/doc/query.md).
+See [Index and Querying Data](doc/query.md).
 
 ### Conflicts
 
@@ -187,7 +193,7 @@ conflicted and needs some surgery to resolve the conflicts and bring it
 back to full health.
 
 Learn more about this essential process in the
-[conflicts documentation](plugin/doc/conflicts.md).
+[conflicts documentation](doc/conflicts.md).
 
 ## Known Issues
 

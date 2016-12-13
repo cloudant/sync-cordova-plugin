@@ -23,7 +23,7 @@ If you are an IBMer, please contact us directly as the contribution process is
 slightly different.
 
 ## Requirements
-- [Node.js&reg;](https://nodejs.org)
+- [Node.js](https://nodejs.org)
 - [CouchDB](http://couchdb.apache.org/)
   * OSX - `brew install couchdb`
   * Ubuntu - `sudo apt-get install couchdb`
@@ -32,13 +32,13 @@ slightly different.
 - plugin.xml - Defines the structure of the plugin
 - package.json - package metadata and dependency information
 - node_modules - npm dependency downloads (after running `npm install`)
-- docs - Product documentation
+- doc - Product documentation
 - src
   * ios - iOS plug-in resources
   * android - Android plug-in resources
 - tests - A plug-in which contains the tests.
   * plugin.xml - Test plugin's plugin.xml
-  * test.js - The file which exposes all the tests to the framework.
+  * Test.js - The file which exposes all the tests to the framework.
   * \*.js JavaScript tests
 - www - Plugin source code
 
@@ -77,10 +77,10 @@ $  cordova-paramedic --platform 'android@5.0' --plugin . --verbose
 ```
 
 ## Adding tests
-Tests should be placed in the `plugin/tests` directory.  To add a new test file
-you create a new JavaScript file. You then include it in the `tests.js` file,
+Tests should be placed in the `tests` directory.  To add a new test file
+you create a new JavaScript file. You then include it in the `Tests.js` file,
 pulling in the module via require. You must then call the exported function from
-the test case file in the `defineAutoTests` function in the `tests.js` file.
+the test case file in the `defineAutoTests` function in the `Tests.js` file.
 
 ```js
 // ...
