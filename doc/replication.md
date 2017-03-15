@@ -69,16 +69,16 @@ From the device side, replication is straightforward. You can replicate from a
 local datastore to a remote database, from a remote database to a local
 datastore, or both ways to implement synchronisation.
 
-Replications are set up in code on a device. Use `Replicator` with 
+Replications are set up in code on a device. Use `Replicator` with
 the appropriate source and target options to configure and create
-the object. Each `Replicator` object can register an event handler 
+the object. Each `Replicator` object can register an event handler
 for when replication completes or encounters an error.
 
 In this example we replicate a local Datastore to a remote database:
 
 ```js
-var DatastoreManager = require('com.cloudant.sync.')
-var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
+var Replicator = cordova.require('cloudant-sync.Replicator');
 
 DatastoreManager.openDatastore('my_datastore')
     .then(function (datastore) {
@@ -116,8 +116,8 @@ DatastoreManager.openDatastore('my_datastore')
 
 And getting data from a remote database to a local one:
 ```js
-var DatastoreManager = require('com.cloudant.sync.')
-var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
+var Replicator = cordova.require('cloudant-sync.Replicator');
 
 DatastoreManager.openDatastore('my_datastore')
     .then(function (datastore) {
@@ -155,8 +155,8 @@ DatastoreManager.openDatastore('my_datastore')
 
 And running a full sync, that is, two one way replications:
 ```js
-var DatastoreManager = require('com.cloudant.sync.')
-var ReplicatorBuilder = require('com.cloudant.sync.ReplicatorBuilder');
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
+var Replicator = cordova.require('cloudant-sync.Replicator');
 
 // Username/password are supplied in the URL and can be Cloudant API keys
 var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';
@@ -226,73 +226,3 @@ DatastoreManager.openDatastore('my_datastore')
         pullReplicator.start();
     }).done();
 ```
-
-<!-- TODO implement updateAllIndexes() API
- ### Using IndexManager with replication
-
-When using IndexManager for querying data, we recommend you update after
-replication completes to avoid a wait for indexing to catch up when the new data
-is first queried:
-
-```java
-import com.cloudant.sync.replication.ReplicatorBuilder;
-import com.cloudant.sync.replication.Replicator;
-import com.cloudant.sync.query.IndexManager;
-
-// username/password can be Cloudant API keys
-URI uri = new URI("https://username:password@username.cloudant.com/my_database");
-
-Datastore ds = manager.openDatastore("my_datastore");
-
-// Create a replicator that replicates changes from the remote
-// database to the local datastore.
-PullReplication pull = new PullReplication();
-pull.source = uri;
-pull.target = ds;
-Replicator replicator = ReplicatorBuilder.pull().from(uri).to(ds).build();
-
-// Create a sample index on type field
-IndexManager indexManager = new IndexManager(ds);
-indexManager.ensureIndexed(Arrays.asList("fieldName"), "indexName");
-
-// Use a CountDownLatch to provide a lightweight way to wait for completion
-latch = new CountDownLatch(1);
-Listener listener = new Listener(latch);
-replicator.getEventBus().register(listener);
-replicator.start();
-latch.await();
-replicator.getEventBus().unregister(listener);
-if (replicator.getState() != Replicator.State.COMPLETE) {
-    System.out.println("Error replicating TO remote");
-    System.out.println(listener.error);
-}
-
-// Ensure all indexes are updated after replication
-indexManager.updateAllIndexes();
-
-``` -->
-
-<!-- TODO implement support for pull replication filters
- ### Filtered pull replication
-
-[Filtered replication][1] is only supported for pull replication. It requires a
-`PullFilter` to be added to the `ReplicatorBuilder` object. A `PullFilter` describes
-the _Filter Function_ that is used and its query parameters.
-
-```java
-import com.cloudant.sync.replication.ReplicatorBuilder;
-import com.cloudant.sync.replication.Replicator;
-import com.cloudant.sync.replication.PullFilter;
-
-
-Map<String, String> parameters = new HashMap<String, String>();
-parameters.put("key", "value");
-PullFilter filter = new PullFilter("filterDoc/filterFunctionName", parameters);
-Replicator replicator = ReplicatorBuilder.pull()
-                        .from(this.getURI())
-                        .to(this.datastore)
-                        .filter(filter)
-                        .build();
-```
-
-[1]: http://docs.couchdb.org/en/1.4.x/replication.html#controlling-which-documents-to-replicate -->
