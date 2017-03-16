@@ -125,7 +125,7 @@ Replication is used to synchronise data between the local datastore and a
 remote database, either a CouchDB instance or a Cloudant database. Many
 datastores can replicate with the same remote database, meaning that
 cross-device synchronisation is achieved by setting up replications from each
-device the the remote database.
+device the remote database.
 
 Replication is simple to get started in the common cases:
 
@@ -140,7 +140,7 @@ var pullReplicatorOptions = {
     target: datastore
 };
 
-// Replicate from the local to remote database
+// Replicate from the remote to local database
 Replicator.create(pullReplicatorOptions).then(function (replicator) {
     replicator.start(); // Fire-and-forget (there are easy ways to monitor the state too)
 }).done();
