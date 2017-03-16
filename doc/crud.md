@@ -8,35 +8,46 @@ named datastore will persist its data between application runs. Names are
 arbitrary strings, with the restriction that the name must match
 `^[a-zA-Z]+[a-zA-Z0-9_]*`.
 
-The `DatastoreManager` directory is "hybriddatastores" across all platforms and is scoped to your application. This directory contains simple folders and SQLite databases if you want to take a peek.
+The `DatastoreManager` directory defaults to `CloudantSync` within the
+`cordova.file.dataDirectory` unless the path option is specified. This directory
+contains simple folders and SQLite databases if you want to take a peek.
 
 Therefore, start by requiring the `DatastoreManager` module to manage datastores for
 that given directory:
 
 ```js
-var DatastoreManager = require('com.cloudant.sync.DatastoreManager');
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager');
 ```
 
 Once you've required the `DatastoreManager`, it's straightforward to create Datastores:
 
 ```js
-DatastoreManager.openDatastore('my_datastore')
+var datastoreManager;
+var datastore;
+DatastoreManager.DatastoreManager()
+    .then(function(my_datastoreManager) {
+        datastoreManager = my_datastoreManager;
+        return datastoreManager.openDatastore('my_datastore');
+    })
     .then(function(my_datastore) {
-        // do something with my_datastore
-        return DatastoreManager.openDatastore('other_datastore');
+        // do something with my_datastore e.g.
+        datastore = my_datastore;
+        // return a promise for opening other_datastore to chain
+        return datastoreManager.openDatastore('other_datastore');
     })
     .then(function (other_datastore) {
         // do something with other_datastore
-    }).done();
+    })
+    .done();
 ```
 
-The `DatabaseManager` handles creating and initialising non-existent
+The `DatastoreManager` handles creating and initialising non-existent
 datastores, so the object returned is ready for reading and writing.
 
 To delete a datastore:
 
 ```js
-DatastoreManager.deleteDatastore("my_datastore")
+datastoreManager.deleteDatastore("my_datastore")
     .then(function () {
         // my_datastore successfully deleted
     });
@@ -68,7 +79,7 @@ rev._id = "doc1"; // Or don't assign the _id property, we'll generate one
 // Build up body content
 rev.description = 'Buy milk';
 rev.completed = false;
-rev.type = 'com.cloudant.sync.example.task';
+rev.type = 'cloudant-sync.example.task';
 
 datastore.createDocumentFromRevision(rev)
     .then(function (savedRevision) {
@@ -117,20 +128,6 @@ datastore.deleteDocumentFromRevision(updatedRevision)
 You don't need to know the ID of the document to retrieve it. Datastore
 provides ways to index and search the fields of your JSON documents.
 For more, see [index-query.md](index-query.md).
-
-<!-- TODO implement API to resolve conflicts
- ## Conflicts
-
-## Getting all documents
-
-The `getAllDocuments()` method allows iterating through all documents in the
-database:
-
-```java
-// read all documents in one go
-int pageSize = ds.getDocumentCount();
-List<DocumentRevision> docs = ds.getAllDocuments(0, pageSize, true);
-``` -->
 
 ## Using attachments
 
@@ -467,16 +464,3 @@ datastore.createDocumentFromRevision(rev)
     ```
 
     This would refuse to delete if `fetchedRevision` was not a leaf node.
-
-
-<!-- TODO Implement deleteDocument(docId) API
- 1. **Advanced** You should also be able to delete a document in its entirety by passing in an ID.
-
-    ```java
-    DocumentRevision deleted = datastore.deleteDocument("doc1");
-    ```
-
-    This marks *all* leaf nodes deleted. Make sure to read
-    [conflicts.md](conflicts.md) before using this method as it can result
-    in data loss (deleting conflicted versions of documents, not just the
-    current winner). -->

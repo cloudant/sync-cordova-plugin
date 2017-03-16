@@ -32,7 +32,8 @@ libraries.
 
 ## Using in your project
 
-Add this plugin to your project via the Cordova CLI.
+Add this plugin to your project via the Cordova CLI. Optionally append the
+`--save` argument to persist the changes in your application's `config.xml`.
 
 <pre>
 $ cordova plugin add https://github.com/cloudant/sync-cordova-plugin#<b><i>VERSION</i></b>
@@ -59,30 +60,25 @@ $ cordova platform add android
 
 Set the environment variable `ANDROID_BUILD` to gradle (e.g. on mac this is `export ANDROID_BUILD=gradle`)
 
-### iOS
+#### iOS
 Add iOS as a platform
 ```console
 $ cordova platform add ios
 ```
 
-<!-- TODO update link to sample
-## Example application
-
-There is a [sample application and a quickstart guide]().
- -->
 ## Overview of the library
 
 Once the plugin has been added to a project, the basics are:
 
 Opening a Datastore
 ```js
-var DatastoreManager = require('cloudant-sync.DatastoreManager');
-
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager');
 var datastore;
-DatastoreManager.openDatastore('my_datastore')
-    .then(function(my_datastore) {
-        datastore = my_datastore;
-    }).done();
+DatastoreManager.DatastoreManager().then(function(datastoreManager) {
+    return datastoreManager.openDatastore('my_datastore');
+}).then(function(my_datastore){
+    datastore = my_datastore;
+}).done();
 ```
 
 Creating documents
@@ -134,7 +130,7 @@ device the the remote database.
 Replication is simple to get started in the common cases:
 
 ```js
-var Replicator = require('cloudant-sync.Replicator');
+var Replicator = cordova.require('cloudant-sync.Replicator');
 
 var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';
 

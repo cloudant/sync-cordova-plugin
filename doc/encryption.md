@@ -35,7 +35,7 @@ var options = {
     password: 'passw0rd',
     identifier: 'toolkit'
 };
-DatastoreManager.openDatastore('my_datastore', options)
+datastoreManager.openDatastore('my_datastore', options)
     .then(function (my_datastore) {
 
     });
