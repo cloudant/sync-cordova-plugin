@@ -72,13 +72,13 @@ Once the plugin has been added to a project, the basics are:
 
 Opening a Datastore
 ```js
-var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager();
-
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager');
 var datastore;
-DatastoreManager.openDatastore('my_datastore')
-    .then(function(my_datastore) {
-        datastore = my_datastore;
-    }).done();
+DatastoreManager.DatastoreManager().then(function(datastoreManager) {
+    return datastoreManager.openDatastore('my_datastore');
+}).then(function(my_datastore){
+    datastore = my_datastore;
+}).done();
 ```
 
 Creating documents

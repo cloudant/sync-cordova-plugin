@@ -77,24 +77,20 @@ for when replication completes or encounters an error.
 In this example we replicate a local Datastore to a remote database:
 
 ```js
-var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
 var Replicator = cordova.require('cloudant-sync.Replicator');
 
-DatastoreManager.openDatastore('my_datastore')
-    .then(function (datastore) {
-        // Username/password are supplied in the URL and can be Cloudant API keys
-        var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';  
+// Note datastore var assigned from openDatastore, see CRUD documentation
 
-        // Options object containing the source and target for push replication
-        var pushReplicatorOptions = {
-            source: datastore,
-            target: uri
-        }
+// Username/password are supplied in the URL and can be Cloudant API keys
+var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';  
 
-        // Create a replicator that replicates changes from the local
-        // Datastore to the remote database.
-        return Replicator.create(pushReplicatorOptions);
-    })
+// Options object containing the source and target for push replication
+var pushReplicatorOptions = {
+    source: datastore,
+    target: uri
+}
+
+Replicator.create(pushReplicatorOptions)
     .then(function (replicator) {
 
         // register event handlers
@@ -111,29 +107,28 @@ DatastoreManager.openDatastore('my_datastore')
 
         // After replication completes, destroy the replicator object
         replicator.destroy();
-    }).done();
+    })
+    .done();
 ```
 
 And getting data from a remote database to a local one:
 ```js
-var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
 var Replicator = cordova.require('cloudant-sync.Replicator');
 
-DatastoreManager.openDatastore('my_datastore')
-    .then(function (datastore) {
-        // Username/password are supplied in the URL and can be Cloudant API keys
-        var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';   
+// Note datastore var assigned from openDatastore, see CRUD documentation
 
-        // Options object containing the source and target for pull replication
-        var pullReplicatorOptions = {
-            source: uri,
-            target: datastore
-        }
+// Username/password are supplied in the URL and can be Cloudant API keys
+var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';   
 
-        // Create a replicator that replicates changes from the remote database
-        // to the local Datastore.
-        return Replicator.create(pullReplicatorOptions);
-    })
+// Options object containing the source and target for pull replication
+var pullReplicatorOptions = {
+    source: uri,
+    target: datastore
+}
+
+// Create a replicator that replicates changes from the remote database
+// to the local Datastore.
+Replicator.create(pullReplicatorOptions)
     .then(function (replicator) {
 
         // register event handlers
@@ -155,36 +150,31 @@ DatastoreManager.openDatastore('my_datastore')
 
 And running a full sync, that is, two one way replications:
 ```js
-var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager()
 var Replicator = cordova.require('cloudant-sync.Replicator');
+
+// Note datastore var assigned from openDatastore, see CRUD documentation
 
 // Username/password are supplied in the URL and can be Cloudant API keys
 var uri = 'https://apikey:apipasswd@username.cloudant.com/my_database';
-var datastore;
 var pushReplicator;
 var pullReplicator;
-DatastoreManager.openDatastore('my_datastore')
-    .then(function (my_datastore) {
-        datastore = my_datastore;
 
-        // Options object containing the source and target for pull replication
-        var pullReplicatorOptions = {
-            source: uri,
-            target: datastore
-        }
+// Options object containing the source and target for pull replication
+var pullReplicatorOptions = {
+    source: uri,
+    target: datastore
+}
+// Options object containing the source and target for push replication
+var pushReplicatorOptions = {
+    source: datastore,
+    target: uri
+}
 
-        // Create a replicator that replicates changes from the remote database
-        // to the local Datastore.
-        return Replicator.create(pullReplicatorOptions);
-    })
+// Create a replicator that replicates changes from the remote database
+// to the local Datastore.
+Replicator.create(pullReplicatorOptions)
     .then(function (replicator) {
         pullReplicator = replicator;
-
-        // Options object containing the source and target for push replication
-        var pushReplicatorOptions = {
-            source: datastore,
-            target: uri
-        }
 
         // Create a replicator that replicates changes from the local
         // Datastore to the remote database.

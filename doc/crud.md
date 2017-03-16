@@ -16,20 +16,29 @@ Therefore, start by requiring the `DatastoreManager` module to manage datastores
 that given directory:
 
 ```js
-var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager').DatastoreManager();
+var DatastoreManager = cordova.require('cloudant-sync.DatastoreManager');
 ```
 
 Once you've required the `DatastoreManager`, it's straightforward to create Datastores:
 
 ```js
-DatastoreManager.openDatastore('my_datastore')
+var datastoreManager;
+var datastore;
+DatastoreManager.DatastoreManager()
+    .then(function(my_datastoreManager) {
+        datastoreManager = my_datastoreManager;
+        return datastoreManager.openDatastore('my_datastore');
+    })
     .then(function(my_datastore) {
-        // do something with my_datastore
-        return DatastoreManager.openDatastore('other_datastore');
+        // do something with my_datastore e.g.
+        datastore = my_datastore;
+        // return a promise for opening other_datastore to chain
+        return datastoreManager.openDatastore('other_datastore');
     })
     .then(function (other_datastore) {
         // do something with other_datastore
-    }).done();
+    })
+    .done();
 ```
 
 The `DatastoreManager` handles creating and initialising non-existent
@@ -38,7 +47,7 @@ datastores, so the object returned is ready for reading and writing.
 To delete a datastore:
 
 ```js
-DatastoreManager.deleteDatastore("my_datastore")
+datastoreManager.deleteDatastore("my_datastore")
     .then(function () {
         // my_datastore successfully deleted
     });
