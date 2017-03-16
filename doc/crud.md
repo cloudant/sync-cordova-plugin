@@ -8,7 +8,7 @@ named datastore will persist its data between application runs. Names are
 arbitrary strings, with the restriction that the name must match
 `^[a-zA-Z]+[a-zA-Z0-9_]*`.
 
-The `DatastoreManager` directory defaults to a `CloudantSync` within the
+The `DatastoreManager` directory defaults to `CloudantSync` within the
 `cordova.file.dataDirectory` unless the path option is specified. This directory
 contains simple folders and SQLite databases if you want to take a peek.
 
