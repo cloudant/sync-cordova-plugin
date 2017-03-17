@@ -717,7 +717,7 @@ function validateDocumentRevision(documentRevision) {
             attachmentName + ' had no data');
       }
 
-      if (_.isEmpty(attachment.contentType)) {
+      if (_.isEmpty(attachment.content_type)) {
         throw new Error(
             'documentRevision contained invalid attachment.  ' +
             attachmentName + ' had no content_type');

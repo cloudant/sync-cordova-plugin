@@ -576,7 +576,7 @@ exports.defineAutoTests = function () {
                             {
                               myLocalAttachment:
                                       {
-                                        contentType: 'text-plain',
+                                        content_type: 'text-plain',
                                         data: btoa('Local attachment') // bota only supports ASCII, not Unicode.
                                       }
                             }
@@ -679,7 +679,7 @@ exports.defineAutoTests = function () {
                             {
                               myLocalAttachment:
                                       {
-                                        contentType: 'text-plain',
+                                        content_type: 'text-plain',
                                         data: btoa('Local attachment') // bota only supports ASCII, not Unicode.
                                       }
                             }
@@ -1064,7 +1064,7 @@ exports.defineAutoTests = function () {
                             {
                               myLocalAttachment:
                                       {
-                                        contentType: 'text-plain',
+                                        content_type: 'text-plain',
                                         data: btoa('Local attachment') // bota only supports ASCII, not Unicode.
                                       }
                             }
@@ -1178,7 +1178,7 @@ exports.defineAutoTests = function () {
                             {
                               myLocalAttachment:
                                       {
-                                        contentType: 'text-plain',
+                                        content_type: 'text-plain',
                                         data: btoa('Local attachment') // bota only supports ASCII, not Unicode.
                                       }
                             }

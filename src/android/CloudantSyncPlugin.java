@@ -91,7 +91,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String DOC_REV = "_rev";
     private static final String DOC_DELETED = "_deleted";
     private static final String DOC_ATTACHMENTS = "_attachments";
-    private static final String DOC_ATTACHMENTS_CONTENT_TYPE = "contentType";
+    private static final String DOC_ATTACHMENTS_CONTENT_TYPE = "content_type";
     private static final String DOC_ATTACHMENTS_DATA = "data";
 
     private static final String REPLICATOR_TOKEN = "token";
