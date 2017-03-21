@@ -66,6 +66,24 @@ Add iOS as a platform
 $ cordova platform add ios
 ```
 
+### Running on an iOS device
+
+To run the cordova app on an iOS device, the following steps are necessary:
+1. Open the iOS project in Xcode (the app is in the `platforms/ios` subdirectory).
+1. General > Signing > Team:<br/>
+   Set the team so the app can be signed.
+1. General > Linked Frameworks and Libraries:<br/>
+   Remove `CocoaLumberjack.framework`, `CDTDatastore.framework`, `FMDB.framework`.
+1. General > Embedded Binaries:<br/>
+   Add `CocoaLumberjack.framework`, `CDTDatastore.framework`, `FMDB.framework`.
+1. Build Phases > Embed Frameworks:<br/>
+   Change “Destination” to `Shared Frameworks`.
+1. Execute the command `cordova run ios`.
+1. If necessary, accept the developer profile on the device by going to
+   Settings > General > Profiles & Device Management > Developer App > <dev_profile>
+   and clicking “Trust <dev_profile>” and re-run the app either on the device or
+   by rerunning `cordova run ios`.
+
 ## Overview of the library
 
 Once the plugin has been added to a project, the basics are:
