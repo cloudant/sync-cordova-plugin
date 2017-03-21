@@ -96,17 +96,18 @@ Replicator.create(pushReplicatorOptions)
         // register event handlers
         replicator.on('complete', function (numDocs) {
             console.log('Replicated ' + numDocs + ' documents');
+            // Destroy push replicator object
+            replicator.destroy();
         });
 
         replicator.on('error', function (message) {
             console.error('Error replicating to remote: ' + message);
+            // Destroy push replicator object
+            replicator.destroy();
         });
 
         // start replication
         replicator.start();
-
-        // After replication completes, destroy the replicator object
-        replicator.destroy();
     })
     .done();
 ```
@@ -134,17 +135,19 @@ Replicator.create(pullReplicatorOptions)
         // register event handlers
         replicator.on('complete', function (numDocs) {
             console.log('Replicated ' + numDocs + ' documents');
+            // Destroy pull replicator object
+            replicator.destroy();
         });
 
         replicator.on('error', function (message) {
             console.error('Error replicating to remote: ' + message);
+            // Destroy pull replicator object
+            replicator.destroy();
         });
 
         // start replication
         replicator.start();
 
-        // After replication completes, destroy the replicator object
-        replicator.destroy();
     }).done();
 ```
 
@@ -187,8 +190,7 @@ Replicator.create(pullReplicatorOptions)
         pushReplicator.on('complete', function (numDocs) {
             console.log('Push complete! Replicated ' + numDocs + ' documents.');
             // Destroy push replicator object
-            pushReplicator.destroy().fin(done);
-
+            pushReplicator.destroy();
         });
 
         pushReplicator.on('error', function (message) {
@@ -216,3 +218,13 @@ Replicator.create(pullReplicatorOptions)
         pullReplicator.start();
     }).done();
 ```
+
+Most applications should register event handlers for their replicators for the
+`'complete'` and `'error'` events as in the examples above, so that they can
+call the replicator's `destroy()` method to free resources after the replication
+has ended.  You may, of course, also want your own handling such as updating
+your application's interface with the new data after a replication has completed
+or retrying the replication at a later time after an error.
+
+The `'error'` event will be received by any event handlers registered for it when
+replication fails, including failure due to the network becoming unreachable.
