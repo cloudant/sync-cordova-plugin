@@ -76,6 +76,10 @@ To run the cordova app on an iOS device, the following steps are necessary:
    Remove `CocoaLumberjack.framework`, `CDTDatastore.framework`, `FMDB.framework`.
 1. General > Embedded Binaries:<br/>
    Add `CocoaLumberjack.framework`, `CDTDatastore.framework`, `FMDB.framework`.
+   _Note that this step adds these frameworks back to "Linked Frameworks and Libraries"
+   as well as adding them to "Embedded Binaries". The libraries should be left in both
+   sections. Their removal in the previous step is simply to prevent each framework appearing
+   twice in "Linked Frameworks and Libraries"._
 1. Build Phases > Embed Frameworks:<br/>
    Change “Destination” to `Shared Frameworks`.
 1. Execute the command `cordova run ios`.
