@@ -1,5 +1,5 @@
-/**
- * Copyright (c) 2015 IBM Corp. All rights reserved.
+/*
+ * Copyright (c) 2015-2017 IBM Corp. All rights reserved.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -20,28 +20,23 @@ import android.util.Log;
 
 import com.cloudant.http.HttpConnectionRequestInterceptor;
 import com.cloudant.http.HttpConnectionResponseInterceptor;
-import com.cloudant.sync.datastore.Attachment;
-import com.cloudant.sync.datastore.ConflictResolver;
-import com.cloudant.sync.datastore.Datastore;
-import com.cloudant.sync.datastore.DatastoreManager;
-import com.cloudant.sync.datastore.DocumentBody;
-import com.cloudant.sync.datastore.DocumentBodyFactory;
-import com.cloudant.sync.datastore.DocumentRevision;
-import com.cloudant.sync.datastore.DocumentRevisionBuilder;
-import com.cloudant.sync.datastore.UnsavedStreamAttachment;
-import com.cloudant.sync.datastore.encryption.AndroidKeyProvider;
-import com.cloudant.sync.datastore.encryption.CachingKeyProvider;
-import com.cloudant.sync.datastore.encryption.KeyProvider;
-import com.cloudant.sync.query.IndexManager;
+import com.cloudant.sync.documentstore.Attachment;
+import com.cloudant.sync.documentstore.ConflictResolver;
+import com.cloudant.sync.documentstore.DocumentStore;
+import com.cloudant.sync.documentstore.DocumentBody;
+import com.cloudant.sync.documentstore.DocumentBodyFactory;
+import com.cloudant.sync.documentstore.DocumentRevision;
+import com.cloudant.sync.documentstore.UnsavedStreamAttachment;
+import com.cloudant.sync.documentstore.encryption.KeyProvider;
+import com.cloudant.sync.query.FieldSort;
+import com.cloudant.sync.query.Query;
 import com.cloudant.sync.query.QueryResult;
 import com.cloudant.sync.replication.Replicator;
 import com.cloudant.sync.replication.ReplicatorBuilder;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,8 +46,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -65,10 +58,10 @@ import java.util.Map;
 public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String TAG = CloudantSyncPlugin.class.getCanonicalName();
 
-    private static final String ACTION_CREATE_DATASTORE_MANAGER = "createDatastoreManager";
-    private static final String ACTION_OPEN_DATASTORE = "openDatastore";
-    private static final String ACTION_CLOSE_DATASTORE = "closeDatastore";
-    private static final String ACTION_DELETE_DATASTORE = "deleteDatastore";
+    private static final String ACTION_SET_DOCUMENT_STORE_PATH = "createDatastoreManager";
+    private static final String ACTION_OPEN_DOCUMENT_STORE = "openDatastore";
+    private static final String ACTION_CLOSE_DOCUMENT_STORE = "closeDatastore";
+    private static final String ACTION_DELETE_DOCUMENT_STORE = "deleteDatastore";
     private static final String ACTION_CREATE_OR_UPDATE_DOCUMENT_FROM_REVISION = "createOrUpdateDocumentFromRevision";
     private static final String ACTION_GET_DOCUMENT = "getDocument";
     private static final String ACTION_DELETE_DOCUMENT_FROM_REVISION = "deleteDocumentFromRevision";
@@ -85,7 +78,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String ACTION_RESOLVE_CONFLICTS_FOR_DOCUMENT = "resolveConflictsForDocument";
     private static final String ACTION_RETURN_RESOLVED_DOCUMENT = "returnResolvedDocument";
 
-    private static final String DATASTORE_NAME = "name";
+    private static final String DOCUMENT_STORE_NAME = "name";
 
     private static final String DOC_ID = "_id";
     private static final String DOC_REV = "_rev";
@@ -95,22 +88,24 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private static final String DOC_ATTACHMENTS_DATA = "data";
 
     private static final String REPLICATOR_TOKEN = "token";
-    private static final String REPLICATOR_DATASTORE = "datastore";
+    private static final String REPLICATOR_DOCUMENT_STORE = "datastore";
     private static final String REPLICATOR_URI = "uri";
     private static final String REPLICATOR_TYPE = "type";
 
     private static final String SQLITEDATABASE_CANONICAL_NAME = "net.sqlcipher.database.SQLiteDatabase";
     private static final String SQLITEDATABASE_LOADLIBS_METHOD_NAME = "loadLibs";
 
-    private static final String DEFAULT_DATASTORE_DIR_NAME = "CloudantSync";
+    private static final String DEFAULT_DOCUMENT_STORE_DIR_NAME = "CloudantSync";
 
 
-    private static Map<String, Datastore> datastores = Collections.synchronizedMap(new HashMap<String, Datastore>());
-    private static Map<String, IndexManager> indexManagers = Collections.synchronizedMap(new HashMap<String, IndexManager>());
+    private static Map<String, DocumentStore> documentStores = Collections.synchronizedMap(new HashMap<String,
+        DocumentStore>());
+    private static Map<String, Query> queries = Collections.synchronizedMap(new
+        HashMap<String, Query>());
     private static Map<Integer, Replicator> replicators = Collections.synchronizedMap(new HashMap<Integer, Replicator>());
     private static Map<Integer, SyncPluginInterceptor> interceptors = Collections.synchronizedMap(new HashMap<Integer, SyncPluginInterceptor>());
     private static Map<String, Map<String, KeyProvider>> keyProviders = Collections.synchronizedMap(new HashMap<String, Map<String, KeyProvider>>());
-    private static Map<Integer, DatastoreManager> datastoreManagers = Collections.synchronizedMap(new HashMap<Integer,DatastoreManager>());
+    private static Map<Integer, String> documentStorePaths = Collections.synchronizedMap(new HashMap<Integer,String>());
     private static Map<String, ConflictResolverWrapper> resolverMap = Collections.synchronizedMap(new HashMap<String, ConflictResolverWrapper>());
 
     private class ConflictResolverWrapper implements ConflictResolver {
@@ -131,7 +126,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
           }
        }
 
-       public DocumentRevision resolve (String docId, List<DocumentRevision> conflicts) {
+       public DocumentRevision resolve (String docId, List<? extends DocumentRevision> conflicts) {
           try {
              JSONArray jsonConflicts = new JSONArray();
              for (DocumentRevision docRev : conflicts) {
@@ -194,69 +189,70 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @return True if the action was valid, false if not.
      */
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-        if (ACTION_CREATE_DATASTORE_MANAGER.equals(action)) {
-            createDatastoreManager(args,callbackContext);
-        } else if (ACTION_OPEN_DATASTORE.equals(action)) {
-            final int datastoreManagerId = args.getInt(0);
-            final String datastoreName = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
+        if (ACTION_SET_DOCUMENT_STORE_PATH.equals(action)) {
+            setDocumentStorePath(args,callbackContext);
+        } else if (ACTION_OPEN_DOCUMENT_STORE.equals(action)) {
+            final int documentStorePathId = args.getInt(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(1)) ? null : args
+                .getString(1);
 
-            openDatastore(datastoreManagerId, datastoreName, callbackContext);
+            openDocumentStore(documentStorePathId, documentStoreName, callbackContext);
 
-        } else if (ACTION_CLOSE_DATASTORE.equals(action)) {
-            closeDatastore(args, callbackContext);
-        } else if (ACTION_DELETE_DATASTORE.equals(action)) {
-            final int datastoreManagerId = args.getInt(0);
+        } else if (ACTION_CLOSE_DOCUMENT_STORE.equals(action)) {
+            closeDocumentStore(args, callbackContext);
+        } else if (ACTION_DELETE_DOCUMENT_STORE.equals(action)) {
             final String name = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            deleteDatastore(datastoreManagerId, name, callbackContext);
+            deleteDocumentStore(name, callbackContext);
 
         } else if (ACTION_CREATE_OR_UPDATE_DOCUMENT_FROM_REVISION.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final JSONObject docRev = JSONObject.NULL.equals(args.get(1)) ? null : args.getJSONObject(1);
             final boolean isCreate = JSONObject.NULL.equals(args.get(2)) ? null : args.getBoolean(2);
 
-            createOrUpdateDocumentFromRevision(datastoreName, docRev, callbackContext, isCreate);
+            createOrUpdateDocumentFromRevision(documentStoreName, docRev, callbackContext, isCreate);
 
         } else if (ACTION_GET_DOCUMENT.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args
+                .getString(0);
             final String docId = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            getDocument(datastoreName, docId, callbackContext);
+            getDocument(documentStoreName, docId, callbackContext);
 
         } else if (ACTION_DELETE_DOCUMENT_FROM_REVISION.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final JSONObject docRev = JSONObject.NULL.equals(args.get(1)) ? null : args.getJSONObject(1);
 
-            deleteDocumentFromRevision(datastoreName, docRev, callbackContext);
+            deleteDocumentFromRevision(documentStoreName, docRev, callbackContext);
 
         } else if (ACTION_ENSURE_INDEXED.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final String indexName = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
             final JSONArray fields = JSONObject.NULL.equals(args.get(2)) ? null : args.getJSONArray(2);
 
-            ensureIndexed(datastoreName, fields, indexName, callbackContext);
+            ensureIndexed(documentStoreName, fields, indexName, callbackContext);
 
         } else if (ACTION_DELETE_INDEX_NAMED.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final String indexName = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            deleteIndexNamed(datastoreName, indexName, callbackContext);
+            deleteIndexNamed(documentStoreName, indexName, callbackContext);
 
         } else if (ACTION_FIND.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final JSONObject query = JSONObject.NULL.equals(args.get(1)) ? null : args.getJSONObject(1);
 
-            find(datastoreName, query, callbackContext);
+            find(documentStoreName, query, callbackContext);
 
         } else if (ACTION_CREATE_REPLICATOR.equals(action)) {
             final JSONObject replicatorJson = JSONObject.NULL.equals(args.get(0)) ? new JSONObject() : args.getJSONObject(0);
-            final JSONObject datastore = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_DATASTORE)) ? new JSONObject() : replicatorJson.getJSONObject(REPLICATOR_DATASTORE);
-            final String datastoreName = JSONObject.NULL.equals(datastore.get(DATASTORE_NAME)) ? null : datastore.getString(DATASTORE_NAME);
+            final JSONObject documentStore = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_DOCUMENT_STORE)) ? new JSONObject() : replicatorJson.getJSONObject(REPLICATOR_DOCUMENT_STORE);
+            final String documentStoreName = JSONObject.NULL.equals(documentStore.get(DOCUMENT_STORE_NAME)) ? null : documentStore.getString(DOCUMENT_STORE_NAME);
             final String remoteUrl = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_URI)) ? null : replicatorJson.getString(REPLICATOR_URI);
             final String type = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_TYPE)) ? null : replicatorJson.getString(REPLICATOR_TYPE);
             final Integer timestamp = JSONObject.NULL.equals(replicatorJson.get(REPLICATOR_TOKEN)) ? null : replicatorJson.getInt(REPLICATOR_TOKEN);
 
-            createReplicator(datastoreName, remoteUrl, type, timestamp, callbackContext);
+            createReplicator(documentStoreName, remoteUrl, type, timestamp, callbackContext);
 
         } else if (ACTION_DESTROY_REPLICATOR.equals(action)) {
             final JSONObject replicatorJson = JSONObject.NULL.equals(args.get(0)) ? new JSONObject() : args.getJSONObject(0);
@@ -291,14 +287,14 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
             unlockInterceptor(token, type, httpContext, timeout, uuid, callbackContext);
         } else if (ACTION_GET_CONFLICTED_DOCUMENT_IDS.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
 
-            getConflictedDocumentIds(datastoreName, callbackContext);
+            getConflictedDocumentIds(documentStoreName, callbackContext);
         } else if (ACTION_RESOLVE_CONFLICTS_FOR_DOCUMENT.equals(action)) {
-            final String datastoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
+            final String documentStoreName = JSONObject.NULL.equals(args.get(0)) ? null : args.getString(0);
             final String documentId = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
 
-            resolveConflictsForDocument(datastoreName, documentId, callbackContext);
+            resolveConflictsForDocument(documentStoreName, documentId, callbackContext);
         } else if (ACTION_RETURN_RESOLVED_DOCUMENT.equals(action)) {
             final JSONObject docRev = JSONObject.NULL.equals(args.get(0)) ? null : args.getJSONObject(0);
             final String resolverId = JSONObject.NULL.equals(args.get(1)) ? null : args.getString(1);
@@ -318,12 +314,11 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    private void createDatastoreManager(JSONArray args, final CallbackContext callbackContext) throws JSONException {
-        //create the datastore
+    private void setDocumentStorePath(JSONArray args, final CallbackContext callbackContext) throws JSONException {
         final String path;
         if(JSONObject.NULL.equals(args.get(0))){
             Context context = cordova.getActivity().getApplicationContext();
-            File fp = context.getDir(DEFAULT_DATASTORE_DIR_NAME, Context.MODE_PRIVATE);
+            File fp = context.getDir(DEFAULT_DOCUMENT_STORE_DIR_NAME, Context.MODE_PRIVATE);
             path = fp.getAbsolutePath();
         } else {
             path = args.getString(0);
@@ -332,10 +327,9 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable (){
             @Override
             public void run(){
-                DatastoreManager dm = new DatastoreManager(path);
-                int id = datastoreManagers.size();
+                int id = documentStorePaths.size();
                 // Auto-boxing id.
-                datastoreManagers.put(id, dm);
+                documentStorePaths.put(id, path);
                 JSONObject response = new JSONObject();
                 try {
                     response.put("id",id); }
@@ -350,21 +344,22 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
 
     /**
-     * Opens a Datastore with the specified name
-     * @param datastoreName - The name of the Datastore to open
+     * Opens a DocumentStore with the specified name
+     * @param documentStoreName - The name of the DocumentStore to open
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void openDatastore(final int datastoreManagerID, final String datastoreName, final CallbackContext callbackContext) {
+    private void openDocumentStore(final int documentStorePathId, final String documentStoreName,
+                                   final
+    CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    // Auto-boxing of datastoreManagerID
-                    DatastoreManager dsm = datastoreManagers.get(datastoreManagerID);
-                    Datastore ds = dsm.openDatastore(datastoreName);
-                    datastores.put(datastoreName, ds);
+                    String path = documentStorePaths.get(documentStorePathId);
+                    DocumentStore ds = DocumentStore.getInstance(new File(path, documentStoreName));
+                    documentStores.put(documentStoreName, ds);
                     JSONObject r = new JSONObject();
-                    r.put("name", datastoreName);
+                    r.put("name", documentStoreName);
                     callbackContext.success(r);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -373,56 +368,50 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         });
     }
 
-    private void closeDatastore(final JSONArray args, final CallbackContext callbackContext) {
+    private void closeDocumentStore(final JSONArray args, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable(){
             @Override
             public void run() {
                 try{
-                    Datastore ds = datastores.remove(args.getString(0));
+                    DocumentStore ds = documentStores.remove(args.getString(0));
                     if(ds == null){
-                        callbackContext.error("Datastore is not open");
+                        callbackContext.error("DocumentStore is not open");
                         return;
                     }
 
                     ds.close();
                     callbackContext.success();
                 } catch (Exception e){
-                    callbackContext.error("Datastore could not be closed");
+                    callbackContext.error("DocumentStore could not be closed");
                 }
             }
         });
     }
 
     /**
-     * Deletes a Datastore with the specified name
-     * @param datastoreName - The name of the Datastore to delete
+     * Deletes a DocumentStore with the specified name
+     * @param documentStoreName - The name of the document store to delete
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void deleteDatastore(final int datastoreManagerID, final String datastoreName, final CallbackContext callbackContext) {
+    private void deleteDocumentStore(final String documentStoreName,
+                                  final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
-                if (datastoreName == null) {
-                    callbackContext.error("Datastore name cannot be null");
+                if (documentStoreName == null) {
+                    callbackContext.error("DocumentStore name cannot be null");
                 } else {
 
-                    // Check fo related IndexManager in cache
-                    IndexManager im = indexManagers.get(datastoreName);
-                    if (im != null) {
-                        im.close();
-                    }
-
                     // Clear from cache
-                    datastores.remove(datastoreName);
-                    indexManagers.remove(datastoreName);
-
                     try {
-                        // Auto-boxing of datastore manager.
-                        DatastoreManager manager = datastoreManagers.get(datastoreManagerID);
-                        manager.deleteDatastore(datastoreName);
-                    } catch (IOException e) {
-                        Log.e(TAG, "Error deleting from disk Datastore: " + datastoreName, e);
+                        DocumentStore ds = getDocumentStore(documentStoreName);
+                        ds.delete();
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error deleting from disk DocumentStore: " + documentStoreName, e);
                     }
+
+                    documentStores.remove(documentStoreName);
+                    queries.remove(documentStoreName);
 
                     callbackContext.success();
                 }
@@ -432,26 +421,26 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Creates or updates a document from a given revision
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param docRev - The JSON document revision to save
      * @param callbackContext - The javascript callback to execute when complete or errored
      * @param isCreate - if true, indicates we are creating a document and if false, indicates
      *        we are updating a document.
      */
-    private void createOrUpdateDocumentFromRevision(final String datastoreName, final JSONObject docRev, final CallbackContext callbackContext, final boolean isCreate) {
+    private void createOrUpdateDocumentFromRevision(final String documentStoreName, final JSONObject docRev, final CallbackContext callbackContext, final boolean isCreate) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
                     DocumentRevision rev = buildDocRevision(docRev);
 
                     DocumentRevision result;
 
                     if (isCreate) {
-                        result = ds.createDocumentFromRevision(rev);
+                        result = ds.database().create(rev);
                     } else {
-                        result = ds.updateDocumentFromRevision(rev);
+                        result = ds.database().update(rev);
                     }
                     JSONObject r = buildJSON(result, isCreate);
                     callbackContext.success(r);
@@ -464,17 +453,17 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Fetches a document revision
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param docId - The ID of the document to fetch
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void getDocument(final String datastoreName, final String docId, final CallbackContext callbackContext) {
+    private void getDocument(final String documentStoreName, final String docId, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
-                    DocumentRevision result = ds.getDocument(docId);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
+                    DocumentRevision result = ds.database().read(docId);
                     JSONObject r = buildJSON(result, false);
                     callbackContext.success(r);
                 } catch (Exception e) {
@@ -486,19 +475,19 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Deletes a document revision
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param docRev - The ID of the document to delete
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void deleteDocumentFromRevision(final String datastoreName, final JSONObject docRev, final CallbackContext callbackContext) {
+    private void deleteDocumentFromRevision(final String documentStoreName, final JSONObject docRev, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
                     DocumentRevision rev = buildDocRevision(docRev);
 
-                    DocumentRevision deletedRevision = ds.deleteDocumentFromRevision(rev);
+                    DocumentRevision deletedRevision = ds.database().delete(rev);
                     callbackContext.success(buildJSON(deletedRevision, false));
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -509,29 +498,28 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Adds a single, possibly compound, index for the given field names
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param fields - The list of fields to index
      * @param indexName - The name of the index
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void ensureIndexed(final String datastoreName, final JSONArray fields, final String indexName, final CallbackContext callbackContext) {
+    private void ensureIndexed(final String documentStoreName, final JSONArray fields, final String indexName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    IndexManager im = getIndexManager(datastoreName);
-
                     if (indexName == null || fields == null) {
                         throw new Exception("indexName and fields cannot be null");
                     }
 
-                    List<Object> indexFields = new ArrayList<Object>();
+                    List<FieldSort> indexFields = new ArrayList<FieldSort>();
                     for (int i = 0; i < fields.length(); i++) {
-                        indexFields.add(fields.get(i));
+                        indexFields.add(new FieldSort((String)fields.get(i)));
                     }
 
-                    String index = im.ensureIndexed(indexFields, indexName);
-                    callbackContext.success(index);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
+                    ds.query().createJsonIndex(indexFields, indexName);
+                    callbackContext.success(indexName);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
                 }
@@ -541,23 +529,22 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Deletes an index
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param indexName - The name of the index to delete
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void deleteIndexNamed(final String datastoreName, final String indexName, final CallbackContext callbackContext) {
+    private void deleteIndexNamed(final String documentStoreName, final String indexName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    IndexManager im = getIndexManager(datastoreName);
-
                     if (indexName == null) {
                         throw new Exception("indexName cannot be null");
                     }
 
-                    boolean result = im.deleteIndexNamed(indexName);
-                    PluginResult r = new PluginResult(PluginResult.Status.OK, result);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
+                    ds.query().deleteIndex(indexName);
+                    PluginResult r = new PluginResult(PluginResult.Status.OK, true);
                     callbackContext.sendPluginResult(r);
                 } catch (Exception e) {
                     callbackContext.error(e.getMessage());
@@ -567,24 +554,42 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     }
 
     /**
-     * Queries the Datastore
-     * @param datastoreName - The name of the Datastore
+     * Queries the DocumentStore
+     * @param documentStoreName - The name of the DocumentStore
      * @param query - The Cloudant Query to execute
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void find(final String datastoreName, final JSONObject query, final CallbackContext callbackContext) {
+    private void find(final String documentStoreName, final JSONObject query, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    IndexManager im = getIndexManager(datastoreName);
-
                     if (query == null) {
                         throw new Exception("query object cannot be null");
                     }
 
                     CloudantQuery q = new CloudantQuery(convertJSONtoMap(query));
-                    QueryResult qr = im.find(q.getSelector(), q.getSkip(), q.getLimit(), q.getFields(), q.getSort());
+                    DocumentStore ds = getDocumentStore(documentStoreName);
+                    List<FieldSort> sortSpec = null;
+                    if (q.getSort() != null) {
+                        sortSpec = new ArrayList<FieldSort>();
+                        for (Map<String, String> sortMap : q.getSort()) {
+                            for (Map.Entry<String, String> entry : sortMap.entrySet()) {
+                                FieldSort.Direction direction;
+                                if ("asc".equals(entry.getValue())) {
+                                    direction = FieldSort.Direction.ASCENDING;
+                                } else if ("desc".equals(entry.getValue())) {
+                                    direction = FieldSort.Direction.DESCENDING;
+                                } else {
+                                    throw new Exception("Sort direction must be either \"asc\" or " +
+                                        "\"desc\". Got: " + entry.getValue());
+                                }
+                                sortSpec.add(new FieldSort(entry.getKey(), direction));
+                            }
+                        }
+                    }
+                    QueryResult qr = ds.query().find(q.getSelector(), q.getSkip(), q.getLimit(), q
+                        .getFields(), sortSpec);
 
                     JSONArray r = new JSONArray();
                     if (qr != null) {
@@ -603,18 +608,18 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Creates a new Replicator
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param remoteURI - The remote database URI
      * @param type - The type of replication to be performed
      * @param token - The unique token id of the Replicator
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void createReplicator(final String datastoreName, final String remoteURI, final String type, final Integer token, final CallbackContext callbackContext) {
+    private void createReplicator(final String documentStoreName, final String remoteURI, final String type, final Integer token, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
 
                     if (remoteURI == null || type == null || token == null) {
                         throw new Exception("Replicator uri, type, and token must not be null");
@@ -773,21 +778,21 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
     /**
      * Gets the IDs of documents with conflicts
-     * @param datastoreName - The name of the Datastore
+     * @param documentStoreName - The name of the DocumentStore
      * @param callbackContext - The javascript callback to execute when complete or errored
      */
-    private void getConflictedDocumentIds(final String datastoreName, final CallbackContext callbackContext) {
+    private void getConflictedDocumentIds(final String documentStoreName, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
 
-                    Iterator<String> conflicts = ds.getConflictedDocumentIds();
+                    Iterable<String> conflicts = ds.database().getConflictedIds();
 
                     JSONArray r = new JSONArray();
-                    while (conflicts.hasNext()) {
-                       r.put(conflicts.next());
+                    for (String id : conflicts) {
+                       r.put(id);
                     }
                     callbackContext.success(r);
                 } catch (Exception e) {
@@ -797,12 +802,12 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         });
     }
 
-    private void resolveConflictsForDocument(final String datastoreName, final String documentId, final CallbackContext callbackContext) {
+    private void resolveConflictsForDocument(final String documentStoreName, final String documentId, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Datastore ds = getDatastore(datastoreName);
+                    DocumentStore ds = getDocumentStore(documentStoreName);
 
                     ConflictResolverWrapper conflictResolver = new ConflictResolverWrapper(callbackContext);
 
@@ -810,7 +815,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                     // to retrieve the conflictResolver from other callbacks. The callbackId is unique
                     // to each invocation of this method so we'll use that.
                     resolverMap.put(callbackContext.getCallbackId(), conflictResolver);
-                    ds.resolveConflictsForDocument(documentId, conflictResolver);
+                    ds.database().resolveConflicts(documentId, conflictResolver);
                     PluginResult r = new PluginResult(PluginResult.Status.OK);
                     callbackContext.sendPluginResult(r);
 
@@ -846,39 +851,19 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * @param datastoreName - The name of the associated Datastore
-     * @return - The IndexManager for indexing and querying the named Datastore
-     * @throws Exception
+     * @param name - The DocumentStore name
+     * @return - The DocumentStore object stored in the documentStores Map
+     * @throws Exception - If no DocumentStore value is associated with key 'name'
      */
-    private IndexManager getIndexManager(String datastoreName) throws Exception {
-        if (datastoreName == null) {
-            throw new Exception("Name cannot be null");
-        }
-
-        IndexManager im = indexManagers.get(datastoreName);
-        if (im == null) {
-            Datastore ds = getDatastore(datastoreName);
-            im = new IndexManager(ds);
-            indexManagers.put(datastoreName, im);
-        }
-
-        return im;
-    }
-
-    /**
-     * @param name - The Datastore name
-     * @return - The Datastore object stored in the datastores Map
-     * @throws Exception - If no Datastore value is associated with key 'name'
-     */
-    private Datastore getDatastore(String name) throws Exception {
+    private DocumentStore getDocumentStore(String name) throws Exception {
         if (name == null) {
             throw new Exception("Name cannot be null");
         }
 
-        Datastore store = datastores.get(name);
+        DocumentStore store = documentStores.get(name);
 
         if (store == null) {
-            throw new Exception("No Datastore found with name: " + name);
+            throw new Exception("No DocumentStore found with name: " + name);
         }
 
         return store;
@@ -912,28 +897,30 @@ public class CloudantSyncPlugin extends CordovaPlugin {
     private DocumentRevision buildDocRevision(JSONObject docRevisionJSON) throws Exception {
         if (docRevisionJSON == null) throw new Exception("Document revision cannot be null");
 
-        DocumentRevisionBuilder builder = new DocumentRevisionBuilder();
-
+        String docId = null;
+        String docRev = null;
         DocumentBody body;
 
         if (docRevisionJSON.has(DOC_ID)) {
-            builder.setDocId((String) docRevisionJSON.get(DOC_ID));
+            docId = (String) docRevisionJSON.get(DOC_ID);
         }
 
         if (docRevisionJSON.has(DOC_REV)) {
-            builder.setRevId((String) docRevisionJSON.get(DOC_REV));
+            docRev = (String) docRevisionJSON.get(DOC_REV);
         }
 
-        if (docRevisionJSON.has(DOC_DELETED)) {
-            builder.setDeleted(docRevisionJSON.getBoolean(DOC_DELETED));
+        DocumentRevision revision = new DocumentRevision(docId, docRev);
+
+        if (docRevisionJSON.has(DOC_DELETED) && docRevisionJSON.getBoolean(DOC_DELETED)) {
+            revision.setDeleted();
         }
 
-        List<Attachment> attachmentList = null;
+        Map<String, Attachment> attachmentMap = null;
         if (docRevisionJSON.has(DOC_ATTACHMENTS)) {
 
             JSONObject attachments = docRevisionJSON.getJSONObject(DOC_ATTACHMENTS);
             docRevisionJSON.remove(DOC_ATTACHMENTS);
-            attachmentList = new ArrayList<Attachment>();
+            attachmentMap = new HashMap<String, Attachment>();
 
             Iterator<String> keys = attachments.keys();
             while (keys.hasNext()) {
@@ -944,18 +931,17 @@ public class CloudantSyncPlugin extends CordovaPlugin {
                 String data = attachment.getString("data");
                 byte[] bytes = Base64.decode(data, Base64.NO_WRAP);
 
-                UnsavedStreamAttachment streamAttachment = new UnsavedStreamAttachment(new ByteArrayInputStream(bytes), name, contentType);
-                attachmentList.add(streamAttachment);
+                UnsavedStreamAttachment streamAttachment = new UnsavedStreamAttachment(new ByteArrayInputStream(bytes), contentType);
+                attachmentMap.put(name, streamAttachment);
             }
-            builder.setAttachments(attachmentList);
+            revision.setAttachments(attachmentMap);
         }
 
-        body = DocumentBodyFactory.create(getMapFromJSONObject(docRevisionJSON));
+        revision.setBody(DocumentBodyFactory.create(getMapFromJSONObject(docRevisionJSON)));
 
-        builder.setBody(body);
-
-        return builder.build();
+        return revision;
     }
+
 
     /**
      * @param rev - The DocumentRevision to transform
@@ -972,28 +958,29 @@ public class CloudantSyncPlugin extends CordovaPlugin {
             result.put(DOC_DELETED, rev.isDeleted());
         }
 
-        Map<String, Attachment> attachmentMap = rev.getAttachments();
-        if (attachmentMap != null && !attachmentMap.isEmpty()) {
-            JSONObject attachments = new JSONObject();
+        if (!rev.isDeleted()) {
+            Map<String, Attachment> attachmentMap = rev.getAttachments();
+            if (attachmentMap != null && !attachmentMap.isEmpty()) {
+                JSONObject attachments = new JSONObject();
 
-            for (Map.Entry<String, Attachment> entry : attachmentMap.entrySet()) {
-                Attachment attachment = entry.getValue();
+                for (Map.Entry<String, Attachment> entry : attachmentMap.entrySet()) {
+                    Attachment attachment = entry.getValue();
 
 
-                InputStream is = attachment.getInputStream();
-                byte[] bytes = IOUtils.toByteArray(is);
-                String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                    InputStream is = attachment.getInputStream();
+                    byte[] bytes = IOUtils.toByteArray(is);
+                    String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
 
-                JSONObject attachmentJSON = new JSONObject();
-                attachmentJSON.put(DOC_ATTACHMENTS_CONTENT_TYPE, attachment.type);
-                attachmentJSON.put(DOC_ATTACHMENTS_DATA, data);
+                    JSONObject attachmentJSON = new JSONObject();
+                    attachmentJSON.put(DOC_ATTACHMENTS_CONTENT_TYPE, attachment.type);
+                    attachmentJSON.put(DOC_ATTACHMENTS_DATA, data);
 
-                attachments.put(entry.getKey(), attachmentJSON);
+                    attachments.put(entry.getKey(), attachmentJSON);
+                }
+
+                result.put(DOC_ATTACHMENTS, attachments);
             }
-
-            result.put(DOC_ATTACHMENTS, attachments);
         }
-
         Map<String, Object> body = rev.getBody().asMap();
 
         for (Map.Entry<String, Object> entry : body.entrySet()) {
