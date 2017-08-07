@@ -1,3 +1,6 @@
+# Unreleased
+- [FIXED] Issue where nested JSON objects treated as strings not JSON.
+
 # 0.4.0 (2017-04-07)
 
 - [FIXED] Renamed attachment property `content_type` from `contentType` to match

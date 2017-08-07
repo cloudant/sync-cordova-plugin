@@ -119,6 +119,8 @@ exports.defineAutoTests = function() {
             lastName: 'Kaplinger',
             numberOne: 1,
             numberFive: 5,
+            assignments: ['zero', 'one'],
+            cv: {education: 'Masters', skills: ['javascript', 'java']}
           };
 
           var objWithoutBody = {};
@@ -190,6 +192,45 @@ exports.defineAutoTests = function() {
                 expect(fetchedRevision._rev).toBeDefined();
                 expect(fetchedRevision.firstName)
                     .toBe(employee.firstName);
+                done();
+              }); //End-getDocument
+            }); //End-create
+          });
+
+          it('finds a document revision by docId (nested)', function(done) {
+            var datastore = getDatastore(datastoreDescription);
+            expect(datastore).not.toBe(null);
+
+            // Create
+            datastore.createDocumentFromRevision(employee, function(error, docRevision) {
+              expect(error).toBe(null);
+              expect(docRevision).not.toBe(null);
+              expect(docRevision._id).toBeDefined();
+              expect(docRevision._rev).toBeDefined();
+              expect(docRevision.firstName).toBe(employee.firstName);
+              expect(docRevision.assignments[0]).toBe(employee.assignments[0]);
+              expect(docRevision.assignments[1]).toBe(employee.assignments[1]);
+              expect(docRevision.cv.education).toBe(employee.cv.education);
+              expect(docRevision.cv.skills[0]).toBe(employee.cv.skills[0]);
+
+              // GetDocument
+              datastore.getDocument(docRevision._id, function(
+                  error, fetchedRevision) {
+                expect(error).toBe(null);
+                expect(fetchedRevision).not.toBe(
+                    null);
+                expect(fetchedRevision._id).toBeDefined();
+                expect(fetchedRevision._rev).toBeDefined();
+                expect(fetchedRevision.firstName)
+                    .toBe(employee.firstName);
+                expect(fetchedRevision.assignments[0])
+                    .toBe(employee.assignments[0]);
+                expect(fetchedRevision.assignments[1])
+                    .toBe(employee.assignments[1]);
+                expect(fetchedRevision.cv.education)
+                    .toBe(employee.cv.education);
+                expect(fetchedRevision.cv.skills[0])
+                    .toBe(employee.cv.skills[0]);
                 done();
               }); //End-getDocument
             }); //End-create
