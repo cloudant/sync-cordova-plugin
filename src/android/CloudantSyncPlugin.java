@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -874,19 +875,13 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @return - The Map from the converted JSONObject
      * @throws JSONException
      */
-    private Map<String, Object> getMapFromJSONObject(JSONObject obj) throws JSONException {
-        Map<String, Object> newMap = new HashMap<String, Object>();
+    private byte[] getDocumentBodyBytesFromJSONObject(JSONObject obj) throws JSONException {
+        // These special fields are handled separately from the rest of the body
+        obj.remove(DOC_ID);
+        obj.remove(DOC_REV);
+        obj.remove(DOC_DELETED);
 
-        Iterator<String> iter = obj.keys();
-
-        while (iter.hasNext()) {
-            String key = iter.next();
-            if (!key.equals(DOC_ID) && !key.equals(DOC_REV) && !key.equals(DOC_DELETED)) {
-                newMap.put(key, obj.get(key));
-            }
-        }
-
-        return newMap;
+        return obj.toString().getBytes(Charset.forName("UTF-8"));
     }
 
     /**
@@ -937,7 +932,7 @@ public class CloudantSyncPlugin extends CordovaPlugin {
             revision.setAttachments(attachmentMap);
         }
 
-        revision.setBody(DocumentBodyFactory.create(getMapFromJSONObject(docRevisionJSON)));
+        revision.setBody(DocumentBodyFactory.create(getDocumentBodyBytesFromJSONObject(docRevisionJSON)));
 
         return revision;
     }
@@ -950,7 +945,10 @@ public class CloudantSyncPlugin extends CordovaPlugin {
      * @throws IOException
      */
     private JSONObject buildJSON(DocumentRevision rev, boolean isCreate) throws JSONException, IOException {
-        JSONObject result = new JSONObject();
+        // Create the basic document body in the result object
+        JSONObject result = new JSONObject(rev.getBody().asMap());
+
+        // Add the ID and rev
         result.put(DOC_ID, rev.getId());
         result.put(DOC_REV, rev.getRevision());
 
@@ -980,11 +978,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
 
                 result.put(DOC_ATTACHMENTS, attachments);
             }
-        }
-        Map<String, Object> body = rev.getBody().asMap();
-
-        for (Map.Entry<String, Object> entry : body.entrySet()) {
-            result.put(entry.getKey(), entry.getValue());
         }
 
         return result;
