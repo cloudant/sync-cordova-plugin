@@ -1,4 +1,5 @@
 # Unreleased
+- [UPGRADED] Upgraded sync-android version from 2.0.0 to 2.0.2.
 - [FIXED] Issue where nested JSON objects treated as strings not JSON.
 
 # 0.4.0 (2017-04-07)
