@@ -13,7 +13,7 @@
  -->
 
 <?xml version="1.0" encoding="UTF-8" ?>
-<plugin id="cloudant-sync-tests" version="0.4.1" xmlns:android="http://schemas.android.com/apk/res/android" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+<plugin id="cloudant-sync-tests" version="0.4.2-SNAPSHOT" xmlns:android="http://schemas.android.com/apk/res/android" xmlns="http://apache.org/cordova/ns/plugins/1.0">
     <name>Cloudant Sync Plugin Create/Delete Datastore Tests</name>
     <keywords>cloudant, sync, cloudant-sync, cloudantsync</keywords>
     <repo>https://github.com/cloudant/sync-cordova-plugin#:tests</repo>

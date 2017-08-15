@@ -16,7 +16,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cloudant-sync"
-    version="0.4.1">
+    version="0.4.2-SNAPSHOT">
     <name>Cloudant Sync</name>
     <description>Cloudant Sync Cordova Plugin</description>
     <keywords>cloudant, sync, cloudant-sync, cloudantSync</keywords>
