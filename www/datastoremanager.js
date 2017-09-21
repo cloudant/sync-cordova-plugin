@@ -716,12 +716,16 @@ function validateDocumentRevision(documentRevision) {
             'documentRevision contained invalid attachment.  ' +
             attachmentName + ' had no data');
       }
-
+      // Turn off linting for the content_type identifier since it is lowercase
+      // to match the JSON of CouchDB
+      // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
       if (_.isEmpty(attachment.content_type)) {
         throw new Error(
             'documentRevision contained invalid attachment.  ' +
             attachmentName + ' had no content_type');
       }
+      // Re-enable the rule
+      // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
     }
   }
 }
