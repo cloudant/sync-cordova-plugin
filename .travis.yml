@@ -34,7 +34,7 @@ matrix:
             - echo no | android create avd --force -n test -t android-21 --abi armeabi-v7a
             - emulator -avd test -no-audio -no-window &
             - android-wait-for-emulator
-            - npm run test-platform -- 'android'
+            - travis_wait 30 npm run test-platform -- 'android'
         - os: osx
           language: objective-c
           osx_image: xcode8
@@ -42,10 +42,7 @@ matrix:
             - brew install couchdb
             - brew services start couchdb
           script:
-            - travis_wait 25 npm run test-platform -- 'ios'
-
-services:
-    - couchdb
+            - travis_wait 30 npm run test-platform -- 'ios'
 
 before_script:
     # Update npm
