@@ -44,12 +44,12 @@
     "q": "~1.4.1"
   },
   "devDependencies": {
-    "cordova": "~6.4.0",
+    "cordova": "^7.1.0",
     "cordova-paramedic": "~0.5.0",
     "jscs": "~3.0.7"
   },
   "scripts": {
-    "cpm": "cordova-paramedic --plugin . --verbose --timeout 1200000 ",
+    "cpm": "cordova-paramedic --plugin . --verbose --timeout 1800000 ",
     "compile": "npm run compile-platform -- 'ios' && npm run compile-platform -- 'android'",
     "compile-platform": "npm run cpm -- --justbuild --platform ",
     "test-platform": "npm run cpm -- --platform ",

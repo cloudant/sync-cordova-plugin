@@ -1,63 +1,72 @@
 language: node_js
 
+android:
+  components:
+    # Tools listed twice because doc says it's needed to get updates
+    # https://docs.travis-ci.com/user/languages/android/
+    - tools
+    - platform-tools
+    - tools
+
+    # The BuildTools version used by your project
+    - build-tools-26.0.1
+
+    # The SDK version used to compile your project
+    - android-24
+
+    # Additional components
+    - extra-google-m2repository
+    - extra-android-m2repository
+
+    # Specify at least one system image,
+    # if you need to run emulator(s) during your tests
+    - sys-img-armeabi-v7a-android-24
+
 matrix:
     include:
         - os: linux
-          dist: precise
           language: android
           sudo: required
-          android:
-            components:
-              # Uncomment the lines below if you want to
-              # use the latest revision of Android SDK Tools
-              - platform-tools
-              - tools
-
-              # The BuildTools version used by your project
-              - build-tools-25.0.0
-
-              # The SDK version used to compile your project
-              - android-25
-
-              # Additional components
-              - extra-google-m2repository
-              - extra-android-m2repository
-
-              # Specify at least one system image,
-              # if you need to run emulator(s) during your tests
-              - sys-img-x86-android-24
-              - sys-img-armeabi-v7a-android-24
+          dist: trusty
+          jdk: oraclejdk8
+          services:
+            - docker
+          env:
+            # Note that on trusty the emulator defaults to qemu2 (at least for
+            # the image specified), which broke the old -noaudio option so we
+            # set this environment variable. The reason we specify no audio is:
+            # "Some Linux and Windows computers have faulty audio drivers that
+            # cause different symptoms, such as preventing the emulator from
+            # starting."
+            # -From https://developer.android.com/studio/run/emulator-commandline.html
+            - QEMU_AUDIO_DRV=none
           script:
-            - echo y | android update sdk -u --filter android-24
-            # Launch Android emulator
-            #- echo no | android create avd --force -n test -t android-21 --abi x86
-            - echo no | android create avd --force -n test -t android-21 --abi armeabi-v7a
-            - emulator -avd test -no-audio -no-window &
+            # Update all packages
+            - echo y | sdkmanager --update
+            # List android targets for debug
+            - avdmanager list
+            # Create avd
+            - echo no | avdmanager create avd -f -n test -k "system-images;android-24;default;armeabi-v7a"
+            # Launch emulator
+            - $ANDROID_HOME/emulator/emulator -avd test -no-window &
             - android-wait-for-emulator
-            - npm run test-platform -- 'android'
+            - travis_wait 30 npm run test-platform -- 'android'
         - os: osx
           language: objective-c
-          osx_image: xcode8
-          before_install:
-            - brew install couchdb
-            - brew services start couchdb
+          osx_image: xcode8.3
           script:
-            - travis_wait 25 npm run test-platform -- 'ios'
+            - travis_wait 30 npm run test-platform -- 'ios'
 
-services:
-    - couchdb
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install couchdb && brew services start couchdb ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker pull apache/couchdb:1.7.1 && docker run -d -p 5984:5984 apache/couchdb:1.7.1 ; fi
 
 before_script:
-    # Update npm
-    - npm update -g npm
+    # Make sure CouchDB is up
+    - while [ $? -ne 0 ]; do sleep 1 && curl -v http://localhost:5984; done
     # Run setup to replicate animaldb
     - ./setup.rb
     - nvm install 6
     - npm install
-
-after_script:
     # for now only check javascript production source files follow guidelines.
     - npm run lint
-
-before_install:
-    - jdk_switcher use oraclejdk8

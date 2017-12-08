@@ -1,0 +1,17 @@
+{
+  "name": "cloudant-sync-tests",
+  "version": "0.4.2-SNAPSHOT",
+  "description": "Tests for the cloudant-sync plugin",
+  "cordova": {
+    "id": "cloudant-sync-tests",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  },
+  "keywords": [
+    "ecosystem:cordova"
+  ],
+  "author": "IBM Cloudant",
+  "license": "Apache-2.0"
+}
