@@ -18,7 +18,6 @@
 
 #import <Cordova/CDV.h>
 #import <CDTDatastore/CloudantSync.h>
-#import <CDTDatastore/CloudantSyncEncryption.h>
 #import "CDTSyncPlugin.h"
 #import "CDTSyncPluginDelegate.h"
 #import "CDTSyncPluginInterceptor.h"

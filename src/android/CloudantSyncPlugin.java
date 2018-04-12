@@ -27,7 +27,6 @@ import com.cloudant.sync.documentstore.DocumentBody;
 import com.cloudant.sync.documentstore.DocumentBodyFactory;
 import com.cloudant.sync.documentstore.DocumentRevision;
 import com.cloudant.sync.documentstore.UnsavedStreamAttachment;
-import com.cloudant.sync.documentstore.encryption.KeyProvider;
 import com.cloudant.sync.query.FieldSort;
 import com.cloudant.sync.query.Query;
 import com.cloudant.sync.query.QueryResult;
@@ -105,7 +104,6 @@ public class CloudantSyncPlugin extends CordovaPlugin {
         HashMap<String, Query>());
     private static Map<Integer, Replicator> replicators = Collections.synchronizedMap(new HashMap<Integer, Replicator>());
     private static Map<Integer, SyncPluginInterceptor> interceptors = Collections.synchronizedMap(new HashMap<Integer, SyncPluginInterceptor>());
-    private static Map<String, Map<String, KeyProvider>> keyProviders = Collections.synchronizedMap(new HashMap<String, Map<String, KeyProvider>>());
     private static Map<Integer, String> documentStorePaths = Collections.synchronizedMap(new HashMap<Integer,String>());
     private static Map<String, ConflictResolverWrapper> resolverMap = Collections.synchronizedMap(new HashMap<String, ConflictResolverWrapper>());
 

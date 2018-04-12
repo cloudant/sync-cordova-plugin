@@ -98,8 +98,6 @@ function DatastoreManager(options) {
  * @summary Opens a {@link Datastore}.
  * @description If there is no existing {@link Datastore} with the given name
  * on disk then one will be created.
- * If an encryptionOptions object is supplied, the {@link Datastore} will be
- *  encrypted.
  *
  * @function DatastoreManager#openDatastore
  * @param {String} name - The name of the {@link Datastore} to open
@@ -120,16 +118,6 @@ function(name, callback) {
   if (!_.isString(name)) {
     throw new Error('name must be a String');
   }
-
-  if (typeof encryptionOptions === 'function') {
-    // No encryption options specified
-    callback = encryptionOptions;
-    encryptionOptions = {
-      password: null,
-      identifier: null,
-    };
-  }
-
 
   var deferred = Q.defer();
 
