@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "cordova": "^7.1.0",
-    "cordova-paramedic": "~0.5.0",
+    "cordova-paramedic": "apache/cordova-paramedic",
     "jscs": "~3.0.7"
   },
   "scripts": {

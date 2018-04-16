@@ -9,10 +9,11 @@ android:
     - tools
 
     # The BuildTools version used by your project
-    - build-tools-26.0.1
+    - build-tools-27.0.3
 
     # The SDK version used to compile your project
     - android-19
+    - android-27
 
     # Additional components
     - extra-google-m2repository
@@ -50,7 +51,7 @@ matrix:
             # Launch emulator
             - $ANDROID_HOME/emulator/emulator -avd test -no-window &
             - android-wait-for-emulator
-            - travis_wait 30 npm run test-platform -- 'android'
+            - travis_wait 30 npm run test-platform -- 'android@7.1.0'
         - os: osx
           language: objective-c
           osx_image: xcode8.3
@@ -68,5 +69,6 @@ before_script:
     - ./setup.rb
     - nvm install 6
     - npm install
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then npm install --no-save ios-deploy@1.9.2 ios-sim@6.1.2 ; fi
     # for now only check javascript production source files follow guidelines.
     - npm run lint
