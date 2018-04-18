@@ -27,7 +27,7 @@ libraries.
 
 ## Supported Platforms
 
-* Android
+* Android (API level 19+)[See known issues](#known-issues)
 * iOS
 
 ## Using in your project
@@ -215,7 +215,10 @@ Learn more about this essential process in the
 
 ## Known Issues
 
-None at this time
+Nested JSON elements do not work correctly on Android API levels <19. This is because the
+[`JsonObject#wrap()`](https://developer.android.com/reference/org/json/JSONObject.html#wrap(java.lang.Object))
+used internally in the platform is only available since API level 19.
+If you have no nested JSON elements the minimum API level is 16.
 
 ## Contributors
 
