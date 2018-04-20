@@ -38,21 +38,6 @@
 
     <platform name="android">
         <js-module src="android/TestUtil.js" name="TestUtil" />
-        <lib-file src="libs/sqlcipher.jar"/>
-        <resource-file src="libs/armeabi/libdatabase_sqlcipher.so" target="libs/armeabi/libdatabase_sqlcipher.so"/>
-        <resource-file src="libs/armeabi/libsqlcipher_android.so" target="libs/armeabi/libsqlcipher_android.so"/>
-        <resource-file src="libs/armeabi/libstlport_shared.so" target="libs/armeabi/libstlport_shared.so"/>
-
-        <resource-file src="libs/armeabi-v7a/libdatabase_sqlcipher.so" target="libs/armeabi-v7a/libdatabase_sqlcipher.so"/>
-        <resource-file src="libs/armeabi-v7a/libsqlcipher_android.so" target="libs/armeabi-v7a/libsqlcipher_android.so"/>
-        <resource-file src="libs/armeabi-v7a/libstlport_shared.so" target="libs/armeabi-v7a/libstlport_shared.so"/>
-
-        <resource-file src="libs/x86/libdatabase_sqlcipher.so" target="libs/x86/libdatabase_sqlcipher.so"/>
-        <resource-file src="libs/x86/libsqlcipher_android.so"  target="libs/x86/libsqlcipher_android.so"/>
-        <resource-file src="libs/x86/libstlport_shared.so" target="libs/x86/libstlport_shared.so"/>
-
-        <resource-file src="assets/icudt46l.zip" target="assets/icudt46l.zip" />
-
     </platform>
 
     <platform name="ios">

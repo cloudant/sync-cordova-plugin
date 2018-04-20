@@ -17,17 +17,11 @@ var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManage
 var Q = require('cloudant-sync.q');
 
 var DBName = 'indexandquerydb';
-var encryptedDBName = DBName + 'secure';
-var validEncryptionOptions = {
-  password: 'passw0rd',
-  identifier: 'toolkit',
-};
 
 exports.defineAutoTests = function() {
   describe('Datastore', function() {
 
     var db = null;
-    var encryptedDb = null;
     var manaer;
 
     beforeAll(function createManager(done) {

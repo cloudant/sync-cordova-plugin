@@ -22,20 +22,12 @@ var Q = require('cloudant-sync.q');
 
 var DBName1 = 'conflictdb';
 var DBName2 = 'conflictdb2';
-var EncryptedDBName1 = DBName1 + 'secure';
-var EncryptedDBName2 = DBName2 + 'secure';
 
 exports.defineAutoTests = function () {
-  var validEncryptionOptions = {
-    password: 'passw0rd',
-    identifier: 'toolkit'
-  };
 
   var manager;
   var localStore1 = null;
   var localStore2 = null;
-  var encryptedStore1 = null;
-  var encryptedStore2 = null;
 
   var uri = TestUtil.LOCAL_COUCH_URL + '/conflictdb';
 
@@ -56,18 +48,10 @@ exports.defineAutoTests = function () {
     return manager.openDatastore(DBName1)
             .then(function (newLocalStore) {
               localStore1 = newLocalStore;
-              return manager.openDatastore(EncryptedDBName1, validEncryptionOptions);
-            })
-            .then(function (newEncryptedLocalStore) {
-              encryptedStore1 = newEncryptedLocalStore;
               return manager.openDatastore(DBName2);
             })
             .then(function (newLocalStore) {
               localStore2 = newLocalStore;
-              return manager.openDatastore(EncryptedDBName2, validEncryptionOptions);
-            })
-            .then(function (newEncryptedLocalStore) {
-              encryptedStore2 = newEncryptedLocalStore;
             })
             .catch(function (error) {
               console.error(error);
@@ -77,13 +61,7 @@ exports.defineAutoTests = function () {
   function deleteLocalDatastores() {
     return manager.deleteDatastore(DBName1)
             .then(function () {
-              return manager.deleteDatastore(EncryptedDBName1);
-            })
-            .then(function () {
               return manager.deleteDatastore(DBName2);
-            })
-            .then(function () {
-              return manager.deleteDatastore(EncryptedDBName2);
             })
             .catch(function (error) {
               console.error(error);

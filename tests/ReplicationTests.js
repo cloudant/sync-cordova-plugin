@@ -28,11 +28,6 @@ exports.defineAutoTests = function() {
 
   describe('Replication', function() {
 
-    var validEncryptionOptions = {
-      password: 'passw0rd',
-      identifier: 'toolkit',
-    };
-
     var manager;
 
     var badtoken = 'badtoken';
@@ -42,9 +37,7 @@ exports.defineAutoTests = function() {
 
     var uri = TestUtil.LOCAL_COUCH_URL + '/animaldb';
     var localStore = null;
-    var encryptedStore = null;
     var storeName = null;
-    var encryptedStoreName = null;
 
     var defaultTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
 
@@ -872,7 +865,7 @@ exports.defineAutoTests = function() {
               Replicator.create(options, function(error,
                 replicator) {
               });
-              fail('Request interceptor following a valid interceptor is not a function');            
+              fail('Request interceptor following a valid interceptor is not a function');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -899,7 +892,7 @@ exports.defineAutoTests = function() {
               Replicator.create(options, function(error,
                 replicator) {
               });
-              fail('Request interceptor following a valid interceptor is not a function');            
+              fail('Request interceptor following a valid interceptor is not a function');
             } catch (error) {
               expect(error).not.toBe(null);
               done();
@@ -1115,7 +1108,7 @@ exports.defineAutoTests = function() {
                 })
                 .catch(function(e) {
                 });
-              fail('Push replicator source is null');  
+              fail('Push replicator source is null');
               done();
             } catch (error) {
               expect(error).not.toBe(null);
@@ -1399,7 +1392,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               requestInterceptors: null
             };
@@ -1425,7 +1418,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               responseInterceptors: null
             };
@@ -1451,7 +1444,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               requestInterceptors: 'foo'
             };
@@ -1477,7 +1470,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               responseInterceptors: 'foo'
             };
@@ -1503,7 +1496,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               requestInterceptors: ['foo']
             };
@@ -1529,7 +1522,7 @@ exports.defineAutoTests = function() {
             expect(datastore).not.toBe(null);
 
             var options = {
-              source: uri, 
+              source: uri,
               target: datastore,
               responseInterceptors: ['foo']
             };

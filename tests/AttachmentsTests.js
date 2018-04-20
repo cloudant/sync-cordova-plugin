@@ -17,15 +17,10 @@ var DatastoreManager = require('cloudant-sync.DatastoreManager').DatastoreManage
 var Q = require('cloudant-sync.q');
 
 var DBName = 'cruddb';
-var EncryptedDBName = DBName + 'secure';
 
 exports.defineAutoTests = function() {
   describe('Datastore', function() {
 
-    var validEncryptionOptions = {
-      password: 'passw0rd',
-      identifier: 'toolkit',
-    };
     var manager;
     var localStore = null;
 
@@ -44,9 +39,6 @@ exports.defineAutoTests = function() {
 
     afterEach(function deleteDatastore(done) {
       manager.deleteDatastore(DBName)
-        .then(function() {
-          return manager.deleteDatastore(EncryptedDBName);
-        })
         .catch(function(error) {
           console.error(error);
         })
@@ -57,11 +49,8 @@ exports.defineAutoTests = function() {
       manager.openDatastore(DBName)
         .then(function(newLocalStore) {
           localStore = newLocalStore;
-          return manager.openDatastore(EncryptedDBName, validEncryptionOptions);
         })
-        .then(function(newEncryptedLocalStore) {
-          encryptedStore = newEncryptedLocalStore;
-        }).catch(function(error) {
+        .catch(function(error) {
           console.error(error);
         }).fin(done);
     });
