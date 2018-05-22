@@ -1,3 +1,5 @@
+# THIS LIBRARY IS NOT SUPPORTED AND IS NO LONGER MAINTAINED
+
 # Cloudant Sync - Cordova Plugin
 
 **Applications use Cloudant Sync to store, index and query local JSON data on a
